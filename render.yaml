@@ -1,0 +1,14 @@
+# Render 部署配置（Blueprint）。在 Render 里 New + → Blueprint，连这个仓库即可。
+# GEMINI_API_KEY 和 ACCESS_PASSWORD 是机密，不写在这里，在 Render 控制台手填。
+services:
+  - type: web
+    name: reading-companion
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.mjs
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: ACCESS_PASSWORD
+        sync: false

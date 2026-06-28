@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>阅读陪伴 · 登录</title>
+    <style>
+      * { box-sizing: border-box; }
+      body {
+        margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+        background: radial-gradient(120% 120% at 50% 0%, #2b2d31, #0d0e0f);
+        font-family: -apple-system, "PingFang SC", sans-serif; color: #fff;
+      }
+      .card {
+        width: 320px; max-width: 88vw; background: rgba(255,255,255,0.06);
+        border: 1px solid rgba(255,255,255,0.1); border-radius: 18px; padding: 28px 22px; text-align: center;
+        backdrop-filter: blur(20px);
+      }
+      h1 { font-size: 20px; margin: 0 0 6px; }
+      p { color: #9a9aa2; font-size: 13px; margin: 0 0 18px; }
+      input {
+        width: 100%; padding: 12px 14px; border-radius: 12px; border: none; font-size: 15px;
+        margin-bottom: 12px; background: #fff; color: #1d1d1f;
+      }
+      button {
+        width: 100%; padding: 12px; border-radius: 12px; border: none; font-size: 15px; font-weight: 600;
+        background: #0a84ff; color: #fff; cursor: pointer;
+      }
+      .err { color: #ff6b6b; font-size: 13px; height: 18px; margin-top: 8px; }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>📖 阅读陪伴</h1>
+      <p>请输入访问密码</p>
+      <input id="pw" type="password" placeholder="密码" autofocus />
+      <button id="go">进入</button>
+      <div class="err" id="err"></div>
+    </div>
+    <script>
+      async function login() {
+        const pw = document.getElementById('pw').value;
+        const r = await fetch('/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: pw }) });
+        if (r.ok) location.href = '/';
+        else document.getElementById('err').textContent = '密码不对';
+      }
+      document.getElementById('go').onclick = login;
+      document.getElementById('pw').addEventListener('keydown', (e) => { if (e.key === 'Enter') login(); });
+    </script>
+  </body>
+</html>

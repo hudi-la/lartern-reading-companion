@@ -5,6 +5,7 @@ import https from 'https';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import crypto from 'crypto';
 import express from 'express';
 import { WebSocketServer } from 'ws';
 import { GoogleGenAI, Modality } from '@google/genai';
@@ -25,6 +26,22 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '';
 const MODEL = process.env.GEMINI_LIVE_MODEL || 'gemini-3.1-flash-live-preview';
+
+// 访问密码（设了 ACCESS_PASSWORD 才启用；本地不设=不限制）
+const ACCESS_PASSWORD = process.env.ACCESS_PASSWORD || '';
+const AUTH_TOKEN = ACCESS_PASSWORD ? crypto.createHash('sha256').update(ACCESS_PASSWORD).digest('hex') : '';
+function parseCookies(req) {
+  const out = {};
+  (req.headers.cookie || '').split(';').forEach((p) => {
+    const i = p.indexOf('=');
+    if (i > 0) out[p.slice(0, i).trim()] = p.slice(i + 1).trim();
+  });
+  return out;
+}
+function isAuthed(req) {
+  if (!AUTH_TOKEN) return true; // 没设密码 = 放行
+  return parseCookies(req).rc_auth === AUTH_TOKEN;
+}
 
 const VISION_MODEL = process.env.GEMINI_VISION_MODEL || 'gemini-2.5-flash';
 
@@ -81,7 +98,28 @@ function usageCost(u) {
 }
 
 const app = express();
+app.set('trust proxy', 1); // 云端在反代后面，识别 https
 app.use(express.json({ limit: '12mb' })); // 封面图片走 JSON body
+
+// 登录页与校验（在门禁之前注册，未登录也能访问）
+app.get('/login', (req, res) => res.sendFile(path.join(__dirname, 'web', 'login.html')));
+app.post('/login', (req, res) => {
+  const pw = (req.body && req.body.password) || '';
+  if (AUTH_TOKEN && crypto.createHash('sha256').update(pw).digest('hex') === AUTH_TOKEN) {
+    const secure = req.headers['x-forwarded-proto'] === 'https' ? '; Secure' : '';
+    res.setHeader('Set-Cookie', `rc_auth=${AUTH_TOKEN}; HttpOnly; Path=/; Max-Age=2592000; SameSite=Lax${secure}`);
+    return res.json({ ok: true });
+  }
+  res.status(401).json({ ok: false });
+});
+
+// 门禁：未登录的，网页跳登录页，接口返回 401
+app.use((req, res, next) => {
+  if (isAuthed(req)) return next();
+  if ((req.headers.accept || '').includes('text/html')) return res.redirect('/login');
+  res.status(401).json({ error: 'unauthorized' });
+});
+
 app.use(express.static(path.join(__dirname, 'web')));
 app.get('/status', (req, res) => res.json({ ready: Boolean(KEY), model: MODEL }));
 
@@ -134,7 +172,7 @@ const server = haveCerts
       app
     )
   : http.createServer(app);
-const wss = new WebSocketServer({ server, path: '/live' });
+const wss = new WebSocketServer({ server, path: '/live', verifyClient: (info, cb) => cb(isAuthed(info.req)) });
 
 wss.on('connection', (browser) => {
   let session = null;
