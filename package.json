@@ -7,6 +7,9 @@
     "start": "node server.mjs",
     "web": "node server.mjs"
   },
+  "engines": {
+    "node": ">=20"
+  },
   "dependencies": {
     "@google/genai": "^1.52.0",
     "express": "^4.22.2",
