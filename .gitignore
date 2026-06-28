@@ -1,0 +1,11 @@
+node_modules/
+data/
+.env
+.DS_Store
+
+# 本地文档，不入库
+NOTES.md
+ARCHITECTURE.md
+
+# 自签证书含私钥，不入库
+certs/

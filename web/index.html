@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <title>阅读陪伴</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="screen">
+      <video id="video" autoplay playsinline muted></video>
+      <div class="vignette"></div>
+
+      <!-- 顶部栏 -->
+      <div class="top-bar">
+        <button id="menuBtn" class="icon-btn">☰</button>
+        <span class="book-name" id="bookTitle">未选择书</span>
+        <button id="pauseBtn" class="icon-btn" title="暂停摄像头和收音">⏸</button>
+        <span id="liveDot" class="status-dot" title="检查中…"></span>
+      </div>
+
+      <div class="menu" id="menu" hidden>
+        <button data-action="library">📚 我的书柜</button>
+        <button data-action="mode">🔄 模式：<span id="modeLabel">陪伴</span></button>
+        <button data-action="settings">⚙ 设置</button>
+      </div>
+
+      <!-- 语音交互中心 -->
+      <div class="orb-wrap" id="orbWrap">
+        <div class="caption" id="caption"></div>
+        <div class="orb stopped" id="orb"></div>
+        <div class="orb-label" id="statusText">点一下唤醒</div>
+      </div>
+
+      <!-- 添加新书：拍封面识别 -->
+      <div class="capture-bar" id="captureBar" hidden>
+        <div class="cap-frame"></div>
+        <div class="cap-text" id="capText">把书的封面对准画面，点下方拍摄</div>
+        <button id="captureBtn" class="cap-btn">📷 拍摄封面</button>
+        <button id="captureSkip" class="cap-skip" hidden>识别不出？先建一本空书</button>
+        <button id="captureCancel" class="cap-cancel">取消</button>
+      </div>
+
+      <!-- 暂停遮罩：大大的恢复按钮放正中间 -->
+      <div class="paused-veil" id="pausedVeil" hidden>
+        <button id="resumeBtn" class="resume-big">▶</button>
+        <div class="resume-label">已暂停 · 点击恢复</div>
+      </div>
+    </div>
+
+    <!-- 书柜 -->
+    <div class="overlay" id="booksPanel" hidden>
+      <div class="card">
+        <div class="card-head">
+          <strong>📚 我的书柜</strong>
+          <button class="icon-btn dark" data-close="booksPanel">✕</button>
+        </div>
+        <div class="book-grid" id="bookGrid"></div>
+      </div>
+    </div>
+
+    <!-- 设置 -->
+    <div class="overlay" id="settingsPanel" hidden>
+      <div class="card">
+        <div class="card-head">
+          <strong>⚙ 设置</strong>
+          <button class="icon-btn dark" data-close="settingsPanel">✕</button>
+        </div>
+        <label class="field">
+          <span>回答语言</span>
+          <select id="replyLang">
+            <option value="auto">自动（跟随我提问的语言）</option>
+            <option value="zh">中文为主</option>
+            <option value="en">English</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>摄像头</span>
+          <select id="cameraSelect"></select>
+        </label>
+        <div class="log" id="log"></div>
+      </div>
+    </div>
+
+    <canvas id="captureCanvas" hidden></canvas>
+    <script src="app.js"></script>
+  </body>
+</html>

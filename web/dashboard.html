@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>阅读陪伴 · 用量后台</title>
+    <style>
+      * { box-sizing: border-box; }
+      body {
+        margin: 0; min-height: 100vh; padding: 28px 20px 40px;
+        font-family: -apple-system, "SF Pro Text", "PingFang SC", sans-serif;
+        background: #0e0f12; color: #e8e8ec;
+      }
+      .wrap { max-width: 720px; margin: 0 auto; }
+      h1 { font-size: 20px; margin: 0 0 4px; }
+      .sub { color: #8a8a92; font-size: 13px; margin-bottom: 22px; }
+      .big {
+        background: linear-gradient(160deg, #1d2330, #14161b);
+        border-radius: 18px; padding: 22px; margin-bottom: 16px;
+      }
+      .big .cost { font-size: 44px; font-weight: 700; }
+      .big .cost small { font-size: 18px; color: #8a8a92; font-weight: 400; }
+      .row { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+      .stat { flex: 1; min-width: 150px; background: #16181d; border-radius: 14px; padding: 16px; }
+      .stat .k { color: #8a8a92; font-size: 12px; }
+      .stat .v { font-size: 22px; font-weight: 600; margin-top: 4px; }
+      table { width: 100%; border-collapse: collapse; background: #16181d; border-radius: 14px; overflow: hidden; }
+      th, td { text-align: right; padding: 11px 14px; font-size: 14px; border-bottom: 1px solid #23252b; }
+      th:first-child, td:first-child { text-align: left; }
+      th { color: #8a8a92; font-weight: 500; font-size: 12px; }
+      tr.hi td { color: #ff8a7a; font-weight: 600; }
+      tfoot td { font-weight: 700; border-bottom: none; }
+      .note { color: #8a8a92; font-size: 12px; margin: 14px 2px; line-height: 1.6; }
+      button {
+        border: none; background: #2a2c33; color: #e8e8ec; font-size: 13px;
+        padding: 9px 16px; border-radius: 10px; cursor: pointer; margin-top: 8px;
+      }
+      button.danger { background: #3a2326; color: #ff8a7a; }
+      .bar { display: flex; justify-content: space-between; align-items: center; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="bar">
+        <div>
+          <h1>用量后台</h1>
+          <div class="sub" id="model">—</div>
+        </div>
+        <button class="danger" id="resetBtn">清零</button>
+      </div>
+
+      <div class="big">
+        <div class="k" style="color:#8a8a92;font-size:13px">累计花费（美元）</div>
+        <div class="cost" id="cost">$0.0000</div>
+      </div>
+
+      <div class="row">
+        <div class="stat"><div class="k">折算 / 小时</div><div class="v" id="perHour">$0.00</div></div>
+        <div class="stat"><div class="k">流式时长</div><div class="v" id="streamMin">0 分</div></div>
+        <div class="stat"><div class="k">会话数</div><div class="v" id="sessions">0</div></div>
+      </div>
+
+      <table>
+        <thead>
+          <tr><th>用量明细</th><th>tokens</th><th>单价/1M</th><th>小计</th></tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+        <tfoot>
+          <tr><td>合计</td><td id="totTok">0</td><td></td><td id="totCost">$0.0000</td></tr>
+        </tfoot>
+      </table>
+
+      <div class="note" id="note"></div>
+    </div>
+
+    <script>
+      const NAMES = {
+        outAudio: '输出音频（模型说话）',
+        inAudio: '输入音频（你的麦克风）',
+        inVideo: '输入视频（摄像头帧）',
+        inText: '输入文字',
+        outText: '输出文字',
+      };
+      function fmtTok(n) { return n >= 1000 ? (n / 1000).toFixed(1) + 'k' : String(Math.round(n)); }
+      async function refresh() {
+        let u;
+        try { u = await (await fetch('/usage')).json(); } catch { return; }
+        document.getElementById('model').textContent = '实时模型 ' + (u.liveModel || '');
+        document.getElementById('cost').innerHTML = '$' + u.cost.toFixed(4);
+        document.getElementById('perHour').textContent = '$' + u.perHour.toFixed(2);
+        document.getElementById('streamMin').textContent = (u.streamingMs / 60000).toFixed(1) + ' 分';
+        document.getElementById('sessions').textContent = u.sessions;
+        const rates = u.rates;
+        const rows = [
+          ['outAudio', rates.outAudio], ['inAudio', rates.inAudio], ['inVideo', rates.inVideo],
+          ['inText', rates.inText], ['outText', rates.outText],
+        ];
+        // 按「实际小计」找最大项；没有任何用量时不高亮（避免看起来像在按单价排）
+        let maxKey = null, maxCost = 0, totTok = 0, totCost = 0, html = '';
+        for (const [k, rate] of rows) {
+          const c = ((u[k] || 0) * rate) / 1e6;
+          if (c > maxCost) { maxCost = c; maxKey = k; }
+        }
+        for (const [k, rate] of rows) {
+          const tok = u[k] || 0; const c = (tok * rate) / 1e6;
+          totTok += tok; totCost += c;
+          html += `<tr class="${k === maxKey ? 'hi' : ''}"><td>${NAMES[k]}</td><td>${fmtTok(tok)}</td><td>$${rate}</td><td>$${c.toFixed(4)}</td></tr>`;
+        }
+        document.getElementById('tbody').innerHTML = html;
+        document.getElementById('totTok').textContent = fmtTok(totTok);
+        document.getElementById('totCost').textContent = '$' + totCost.toFixed(4);
+        const note = document.getElementById('note');
+        if (totCost <= 0) {
+          note.textContent =
+            '还没有用量数据。回到阅读页：选一本书 → 点呼吸球唤醒 → 说话并听它回答，再回来刷新，这里才会出现真实数字。注意：「单价/1M」是固定价目，不代表实际花了多少；要看实际消耗请看「小计」列。';
+        } else {
+          const pct = Math.round((maxCost / totCost) * 100);
+          note.textContent =
+            `红色那行是你「实际」花得最多的一项：${NAMES[maxKey]}，占 ${pct}%。它和「单价最贵」是两回事——单价固定，实际花费 = 你的用量 × 单价。`;
+        }
+      }
+      document.getElementById('resetBtn').onclick = async () => {
+        if (confirm('确定把用量清零？')) { await fetch('/usage/reset', { method: 'POST' }); refresh(); }
+      };
+      refresh();
+      setInterval(refresh, 2000);
+    </script>
+  </body>
+</html>
