@@ -8,22 +8,28 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <div class="screen">
+    <!-- 书房主页：默认落点，相机关闭 -->
+    <div class="home" id="libraryHome" hidden>
+      <div class="home-top">
+        <h1 class="home-title">书房</h1>
+        <button id="homeSettings" class="icon-btn" title="设置">⚙</button>
+      </div>
+      <div class="home-hint" id="homeHint"><span class="dot-off"></span>相机已关闭 · 选一本书开始</div>
+      <div class="book-grid" id="homeGrid"></div>
+    </div>
+
+    <!-- 阅读屏：进入某本书后才显示，这时才开相机 -->
+    <div class="screen" id="readingScreen" hidden>
       <video id="video" autoplay playsinline muted></video>
       <div class="vignette"></div>
 
       <!-- 顶部栏 -->
-      <div class="top-bar">
-        <button id="menuBtn" class="icon-btn">☰</button>
+      <div class="top-bar" id="topBar">
+        <button id="backBtn" class="icon-btn" title="返回书房">←</button>
         <span class="book-name" id="bookTitle">未选择书</span>
+        <button id="modeBtn" class="mode-pill" title="切换模式">陪伴</button>
         <button id="pauseBtn" class="icon-btn" title="暂停摄像头和收音">⏸</button>
         <span id="liveDot" class="status-dot" title="检查中…"></span>
-      </div>
-
-      <div class="menu" id="menu" hidden>
-        <button data-action="library">📚 我的书柜</button>
-        <button data-action="mode">🔄 模式：<span id="modeLabel">陪伴</span></button>
-        <button data-action="settings">⚙ 设置</button>
       </div>
 
       <!-- 语音交互中心 -->
@@ -49,17 +55,6 @@
       </div>
     </div>
 
-    <!-- 书柜 -->
-    <div class="overlay" id="booksPanel" hidden>
-      <div class="card">
-        <div class="card-head">
-          <strong>📚 我的书柜</strong>
-          <button class="icon-btn dark" data-close="booksPanel">✕</button>
-        </div>
-        <div class="book-grid" id="bookGrid"></div>
-      </div>
-    </div>
-
     <!-- 设置 -->
     <div class="overlay" id="settingsPanel" hidden>
       <div class="card">
@@ -80,6 +75,7 @@
           <select id="cameraSelect"></select>
         </label>
         <button class="ghost-btn" id="replayOnboard">↺ 重新观看引导</button>
+        <a class="ghost-btn" href="/dashboard" style="display:block;text-align:center;text-decoration:none">📊 用量后台</a>
         <div class="log" id="log"></div>
       </div>
     </div>

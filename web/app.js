@@ -87,29 +87,20 @@ function setBookTitle() {
 const PALETTE = ['#7b6cf6', '#e0567a', '#2f9e6f', '#d98a2b', '#3a6ea5', '#8a5a44'];
 function renderLibrary() {
   const books = loadBooks();
-  const grid = $('bookGrid');
+  const grid = $('homeGrid');
   grid.innerHTML = '';
   books.forEach((b, i) => {
     const c = document.createElement('div');
     c.className = 'book-card';
-    c.style.background = `linear-gradient(160deg, ${PALETTE[i % PALETTE.length]}, rgba(0,0,0,0.4))`;
+    c.style.background = `linear-gradient(160deg, ${PALETTE[i % PALETTE.length]}, rgba(0,0,0,0.55))`;
     c.innerHTML = `<div class="b-title">${esc(b.title)}</div>` + (b.author ? `<div class="b-author">${esc(b.author)}</div>` : '');
-    c.onclick = () => {
-      currentBook = b;
-      localStorage.setItem('currentBook', b.id);
-      resumeHandle = null; // 换书=新对话
-      setBookTitle();
-      $('booksPanel').hidden = true;
-    };
+    c.onclick = () => enterBook(b);
     grid.appendChild(c);
   });
   const add = document.createElement('div');
   add.className = 'book-card add';
   add.innerHTML = '<div class="plus">＋</div><div>添加新书</div>';
-  add.onclick = () => {
-    $('booksPanel').hidden = true;
-    openCoverScan();
-  };
+  add.onclick = () => enterCapture();
   grid.appendChild(add);
 }
 function esc(s) {
@@ -313,9 +304,7 @@ function saveNewBook(d) {
     localStorage.setItem('currentBook', existing.id);
     resumeHandle = null;
     setBookTitle();
-    exitCoverScan();
-    caption(`还是《${existing.title}》，继续陪你读。\n\n点中间的球，开始吧。`);
-    setStatus('点一下，开始陪你读');
+    goHome(`书房里已有《${existing.title}》 · 点开它继续读`);
     return;
   }
   const books = loadBooks();
@@ -326,9 +315,7 @@ function saveNewBook(d) {
   localStorage.setItem('currentBook', book.id);
   resumeHandle = null;
   setBookTitle();
-  exitCoverScan();
-  caption(`已记下《${book.title}》${book.author ? ' / ' + book.author : ''}${d.summary ? '\n\n' + d.summary : ''}\n\n点中间的球，开始陪你读。`);
-  setStatus('点一下，开始陪你读');
+  goHome(`已加入书房：《${book.title}》 · 点开它开始读`);
 }
 function addBookBlank() {
   const books = loadBooks();
@@ -339,8 +326,7 @@ function addBookBlank() {
   localStorage.setItem('currentBook', book.id);
   resumeHandle = null;
   setBookTitle();
-  exitCoverScan();
-  caption('已建一本空书。对准封面后可重拍识别。');
+  goHome('已建一本空书 · 点开它，对准封面可重拍识别');
 }
 function downsampleTo16k(float32, inRate) {
   if (inRate === 16000) return float32;
@@ -443,9 +429,7 @@ function clearAutoStop() {
 async function wake() {
   if (streaming) return;
   if (!currentBook) {
-    setStatus('请先在书柜里选一本书');
-    $('booksPanel').hidden = false;
-    renderLibrary();
+    setStatus('请先回书房选一本书');
     return;
   }
   ensureOutCtx();
@@ -554,29 +538,77 @@ function onOrbTap() {
   else wake();
 }
 
-// ---------- 菜单 / 设置 ----------
-function setMode(m) {
-  mode = m;
-  $('modeLabel').textContent = m === 'explanation' ? '讲解' : '陪伴';
+// ---------- 双层导航：书房主页 ⇄ 阅读屏 ----------
+// 彻底关掉相机与麦克风（回主页时用，给人「确实结束了」的踏实感）
+function stopAllMedia() {
+  if (streaming) stopStream();
+  if (camStream) camStream.getTracks().forEach((t) => t.stop());
+  if (micStream) micStream.getTracks().forEach((t) => t.stop());
+  camStream = null;
+  micStream = null;
+  mediaStarted = false;
+  paused = false;
+  $('pausedVeil').hidden = true;
+  $('pauseBtn').textContent = '⏸';
+  try {
+    video.srcObject = null;
+  } catch {}
+}
+function goHome(hint) {
+  stopAllMedia();
+  $('captureBar').hidden = true;
+  $('captureSkip').hidden = true;
+  $('orbWrap').hidden = false;
+  $('topBar').hidden = false;
+  $('readingScreen').hidden = true;
+  $('libraryHome').hidden = false;
+  renderLibrary();
+  $('homeHint').innerHTML = '<span class="dot-off"></span>' + (hint || '相机已关闭 · 选一本书开始');
+}
+async function enterBook(b) {
+  currentBook = b;
+  localStorage.setItem('currentBook', b.id);
+  resumeHandle = null; // 换书=新对话
+  setBookTitle();
+  $('libraryHome').hidden = true;
+  $('topBar').hidden = false;
+  $('orbWrap').hidden = false;
+  $('captureBar').hidden = true;
+  $('readingScreen').hidden = false;
+  try {
+    await startMedia();
+  } catch (e) {
+    log('媒体启动失败：' + e.message);
+    setStatus('需要摄像头/麦克风权限');
+  }
+  setState('stopped');
+  inviteStart();
+}
+// 加书（扫封面）：临时进相机，只显示拍摄界面，拍完回主页
+async function enterCapture() {
+  $('libraryHome').hidden = true;
+  $('readingScreen').hidden = false;
+  $('topBar').hidden = true; // 拍封面时不显示阅读控件
+  try {
+    if (!camStream) await startCamera($('cameraSelect').value || undefined);
+  } catch (e) {
+    log('相机启动失败：' + e.message);
+  }
+  openCoverScan();
 }
 
-$('menuBtn').onclick = () => ($('menu').hidden = !$('menu').hidden);
-$('menu').onclick = (e) => {
-  const b = e.target.closest('button[data-action]');
-  if (!b) return;
-  $('menu').hidden = true;
-  const a = b.dataset.action;
-  if (a === 'library') {
-    renderLibrary();
-    $('booksPanel').hidden = false;
-  } else if (a === 'settings') {
-    listCameras();
-    $('settingsPanel').hidden = false;
-  } else if (a === 'mode') setMode(mode === 'companion' ? 'explanation' : 'companion');
+// ---------- 顶栏 / 设置 ----------
+function setMode(m) {
+  mode = m;
+  $('modeBtn').textContent = m === 'explanation' ? '讲解' : '陪伴';
+}
+
+$('backBtn').onclick = () => goHome();
+$('modeBtn').onclick = () => setMode(mode === 'companion' ? 'explanation' : 'companion');
+$('homeSettings').onclick = () => {
+  listCameras();
+  $('settingsPanel').hidden = false;
 };
-document.addEventListener('click', (e) => {
-  if (!$('menu').hidden && !$('menu').contains(e.target) && e.target !== $('menuBtn')) $('menu').hidden = true;
-});
 orb.addEventListener('click', onOrbTap);
 document.querySelectorAll('[data-close]').forEach((b) => (b.onclick = () => ($(b.dataset.close).hidden = true)));
 document.querySelectorAll('.overlay').forEach((ov) =>
@@ -588,7 +620,7 @@ $('pauseBtn').onclick = togglePause;
 $('resumeBtn').onclick = resumeMedia;
 $('captureBtn').onclick = captureCover;
 $('captureSkip').onclick = addBookBlank;
-$('captureCancel').onclick = exitCoverScan;
+$('captureCancel').onclick = () => goHome();
 function buildLangSelects() {
   $('replyLang').innerHTML =
     '<option value="auto">自动（跟随我提问的语言）</option>' + REPLY_LANGS.map((l) => `<option value="${l.v}">${l.label}</option>`).join('');
@@ -636,7 +668,6 @@ function obNext() {
 }
 function startOnboarding() {
   $('onboarding').hidden = false;
-  $('booksPanel').hidden = true;
   obShow(0);
 }
 function obCreateBook(title, author) {
@@ -658,22 +689,11 @@ function inviteStart() {
 async function finishOnboarding(after) {
   localStorage.setItem('onboarded', '1');
   $('onboarding').hidden = true;
-  if (!mediaStarted) {
-    try {
-      await startMedia();
-    } catch (e) {
-      log('初始化媒体失败：' + e.message);
-      setStatus('需要摄像头/麦克风权限');
-    }
+  if (after === 'scan') {
+    enterCapture(); // 直接进相机扫封面，拍完回书房主页
+    return;
   }
-  setState('stopped');
-  if (after === 'scan') openCoverScan();
-  else if (!currentBook) {
-    renderLibrary();
-    $('booksPanel').hidden = false;
-  } else {
-    inviteStart();
-  }
+  goHome(); // 落到书房主页，相机关闭
 }
 
 // 引导各步交互
@@ -737,7 +757,6 @@ $('replayOnboard').onclick = () => {
   const cur = localStorage.getItem('currentBook');
   currentBook = books.find((b) => b.id === cur) || null;
   setBookTitle();
-  renderLibrary();
   setState('stopped');
 
   if (!localStorage.getItem('onboarded')) {
@@ -745,11 +764,5 @@ $('replayOnboard').onclick = () => {
     return;
   }
 
-  try {
-    await startMedia();
-  } catch (e) {
-    log('初始化媒体失败：' + e.message);
-    setStatus('需要摄像头/麦克风权限');
-  }
-  $('booksPanel').hidden = false; // 老用户：每次进入先落在「我的书柜」
+  goHome(); // 老用户：落到书房主页，相机关闭
 })();

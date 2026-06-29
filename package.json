@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@google/genai": "^1.52.0",
+    "@supabase/supabase-js": "^2.45.0",
     "express": "^4.22.2",
     "ws": "^8.21.0"
   }

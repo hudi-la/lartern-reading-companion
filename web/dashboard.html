@@ -37,6 +37,10 @@
       }
       button.danger { background: #3a2326; color: #ff8a7a; }
       .bar { display: flex; justify-content: space-between; align-items: center; }
+      select#who {
+        width: 100%; margin-bottom: 16px; padding: 11px 14px; border-radius: 12px;
+        border: 1px solid #2a2c33; background: #16181d; color: #e8e8ec; font-size: 15px;
+      }
     </style>
   </head>
   <body>
@@ -48,6 +52,8 @@
         </div>
         <button class="danger" id="resetBtn">清零</button>
       </div>
+
+      <select id="who"></select>
 
       <div class="big">
         <div class="k" style="color:#8a8a92;font-size:13px">累计花费（美元）</div>
@@ -82,9 +88,21 @@
         outText: '输出文字',
       };
       function fmtTok(n) { return n >= 1000 ? (n / 1000).toFixed(1) + 'k' : String(Math.round(n)); }
+      const who = document.getElementById('who');
+      let lastData = null;
       async function refresh() {
-        let u;
-        try { u = await (await fetch('/usage')).json(); } catch { return; }
+        let d;
+        try { d = await (await fetch('/usage')).json(); } catch { return; }
+        lastData = d;
+        // 选择器：合计 + 每个用户（保留当前选中）
+        const prev = who.value;
+        const opts = ['<option value="__total__">合计（所有人）</option>']
+          .concat(d.users.map((x) => `<option value="${x.username}">${x.username} · $${x.cost.toFixed(4)}</option>`));
+        who.innerHTML = opts.join('');
+        who.value = d.users.some((x) => x.username === prev) || prev === '__total__' ? prev : '__total__';
+        // 选中谁就看谁；合计用 total
+        const u = who.value === '__total__' ? d.total : d.users.find((x) => x.username === who.value) || d.total;
+        u.rates = d.rates; u.liveModel = d.liveModel;
         document.getElementById('model').textContent = '实时模型 ' + (u.liveModel || '');
         document.getElementById('cost').innerHTML = '$' + u.cost.toFixed(4);
         document.getElementById('perHour').textContent = '$' + u.perHour.toFixed(2);
@@ -120,8 +138,14 @@
         }
       }
       document.getElementById('resetBtn').onclick = async () => {
-        if (confirm('确定把用量清零？')) { await fetch('/usage/reset', { method: 'POST' }); refresh(); }
+        const target = who.value;
+        const label = target === '__total__' ? '所有用户' : target;
+        if (!confirm(`确定把【${label}】的用量清零？`)) return;
+        const body = target === '__total__' ? {} : { user: target };
+        await fetch('/usage/reset', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        refresh();
       };
+      who.onchange = refresh;
       refresh();
       setInterval(refresh, 2000);
     </script>

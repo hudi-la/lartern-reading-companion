@@ -1,5 +1,5 @@
 # Render 部署配置（Blueprint）。在 Render 里 New + → Blueprint，连这个仓库即可。
-# GEMINI_API_KEY 和 ACCESS_PASSWORD 是机密，不写在这里，在 Render 控制台手填。
+# 下面 sync: false 的都是机密，不写在这里，在 Render 控制台手填。
 services:
   - type: web
     name: reading-companion
@@ -10,5 +10,9 @@ services:
     envVars:
       - key: GEMINI_API_KEY
         sync: false
-      - key: ACCESS_PASSWORD
+      - key: ACCESS_USERS # "名字:邀请码" 逗号分隔，如 alice:a1b2,bob:c3d4
+        sync: false
+      - key: SUPABASE_URL # Supabase 项目地址
+        sync: false
+      - key: SUPABASE_SERVICE_KEY # Supabase service_role key
         sync: false
