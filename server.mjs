@@ -199,7 +199,8 @@ app.use((req, res, next) => {
   res.status(401).json({ error: 'unauthorized' });
 });
 
-app.use(express.static(path.join(__dirname, 'web')));
+// no-cache：开发/迭代期保证手机和浏览器永远拿最新前端，避免「改了看不到」
+app.use(express.static(path.join(__dirname, 'web'), { etag: false, lastModified: false, setHeaders: (res) => res.setHeader('Cache-Control', 'no-store') }));
 app.get('/status', (req, res) => res.json({ ready: Boolean(KEY), model: MODEL }));
 
 // 一次性识别封面：图片 -> 书名/作者/背景 JSON

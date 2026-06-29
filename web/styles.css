@@ -38,14 +38,15 @@ body {
   top: 0;
   left: 0;
   right: 0;
-  padding: max(16px, env(safe-area-inset-top)) 18px 10px;
+  padding: max(16px, env(safe-area-inset-top)) 16px 10px;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 9px;
   z-index: 20;
 }
 .book-name {
   flex: 1;
+  min-width: 0; /* 允许标题收缩并省略，否则会把右侧图标挤出屏幕 */
   font-size: 15px;
   font-weight: 600;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
@@ -323,22 +324,31 @@ body {
   cursor: pointer;
 }
 
-/* 暂停遮罩 */
+/* 暂停：冻结画面 + 压暗，正中放恢复按钮；顶栏(20)仍浮在上面可见可点 */
 .paused-veil {
   position: absolute;
   inset: 0;
-  z-index: 24;
-  background: rgba(8, 8, 10, 0.94);
+  z-index: 19; /* 低于 top-bar(20)，所以返回/设置照常可用 */
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 22px;
+  cursor: pointer;
 }
 .paused-veil[hidden] {
   display: none;
 }
+.paused-shot {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: brightness(0.4);
+}
 .resume-big {
+  position: relative;
   width: 128px;
   height: 128px;
   border-radius: 50%;
@@ -346,19 +356,76 @@ body {
   background: radial-gradient(circle at 50% 38%, rgba(120, 220, 255, 0.98), rgba(40, 150, 220, 0.6));
   color: #fff;
   font-size: 46px;
+  line-height: 1;
   cursor: pointer;
   box-shadow: 0 0 50px rgba(80, 190, 255, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding-left: 8px;
+  padding-left: 10px; /* 三角形视觉居中 */
 }
 .resume-big:active {
   transform: scale(0.95);
 }
 .resume-label {
-  color: #c9c9ce;
-  font-size: 16px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  color: #fff;
+  font-size: 17px;
+  font-weight: 600;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.7);
+}
+.resume-hint {
+  font-size: 13px;
+  font-weight: 400;
+  color: #c2c2c9;
+}
+
+/* 呼吸球两侧的暂停 / 翻转按钮 */
+.orb-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+}
+.side-btn {
+  pointer-events: auto;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(20, 20, 24, 0.5);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  color: #fff;
+  font-size: 20px;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.side-btn:active {
+  transform: scale(0.92);
+}
+
+/* 使用帮助列表 */
+.help-list {
+  margin: 2px 0;
+  padding-left: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #d6d6dd;
+}
+.help-list b {
+  color: #fff;
 }
 
 /* 浮层 */
@@ -879,4 +946,32 @@ body {
 }
 .card .log div {
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* 翻转摄像头按钮：阅读屏右下角 */
+.flip-btn {
+  position: absolute;
+  right: 20px;
+  bottom: max(28px, calc(env(safe-area-inset-bottom) + 20px));
+  z-index: 18;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(20, 20, 24, 0.55);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  color: #fff;
+  font-size: 20px;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.flip-btn[hidden] {
+  display: none;
+}
+.flip-btn:active {
+  transform: scale(0.92);
 }

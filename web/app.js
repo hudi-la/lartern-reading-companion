@@ -139,13 +139,20 @@ function buildSystem() {
 }
 
 // ---------- 摄像头 + 抓帧 ----------
-async function startCamera(deviceId) {
+// 默认后置（看书页）；camDeviceId 仅在用户从设置里手动指定某个摄像头时才用
+let camFacing = 'environment'; // 'environment' 后置 / 'user' 前置
+let camDeviceId = null;
+async function startCamera() {
   try {
     if (camStream) camStream.getTracks().forEach((t) => t.stop());
-    camStream = await navigator.mediaDevices.getUserMedia({
-      video: deviceId ? { deviceId: { exact: deviceId } } : { facingMode: 'environment' },
-      audio: false,
-    });
+    const get = (v) => navigator.mediaDevices.getUserMedia({ video: v, audio: false });
+    const want = camDeviceId ? { deviceId: { exact: camDeviceId } } : { facingMode: { exact: camFacing } };
+    try {
+      camStream = await get(want); // 先按精确要求（手机上强制后置/前置）
+    } catch {
+      // 该朝向不存在（如桌面只有一个摄像头）→ 退回宽松匹配
+      camStream = await get(camDeviceId ? { deviceId: camDeviceId } : { facingMode: { ideal: camFacing } });
+    }
     video.srcObject = camStream;
     await video.play().catch(() => {});
     await listCameras();
@@ -155,8 +162,15 @@ async function startCamera(deviceId) {
     setStatus('摄像头打开失败：' + e.name);
   }
 }
+// 翻转前/后摄像头
+async function flipCamera() {
+  camDeviceId = null; // 翻转回到朝向模式，清掉手动指定
+  camFacing = camFacing === 'environment' ? 'user' : 'environment';
+  await startCamera();
+}
 async function listCameras() {
   const sel = $('cameraSelect');
+  if (!sel) return; // 摄像头选择 UI 已移除（改用翻转按钮）
   const prev = sel.value;
   const devs = await navigator.mediaDevices.enumerateDevices();
   const cams = devs.filter((d) => d.kind === 'videoinput');
@@ -216,6 +230,9 @@ async function attachMic() {
 let paused = false;
 function pauseMedia() {
   if (paused) return;
+  // 关相机前先截下当前画面，作为暂停时的冻结背景（不全黑）
+  const shot = captureFrameBase64(1080);
+  if (shot) $('pausedShot').src = 'data:image/jpeg;base64,' + shot;
   if (streaming) stopStream();
   if (camStream) camStream.getTracks().forEach((t) => t.stop());
   if (micStream) micStream.getTracks().forEach((t) => t.stop());
@@ -233,7 +250,7 @@ async function resumeMedia() {
   $('pauseBtn').title = '暂停摄像头和收音';
   paused = false;
   try {
-    await startCamera($('cameraSelect').value || undefined);
+    await startCamera();
     await attachMic();
     log('已恢复：摄像头与麦克风开启');
   } catch (e) {
@@ -590,7 +607,7 @@ async function enterCapture() {
   $('readingScreen').hidden = false;
   $('topBar').hidden = true; // 拍封面时不显示阅读控件
   try {
-    if (!camStream) await startCamera($('cameraSelect').value || undefined);
+    if (!camStream) await startCamera();
   } catch (e) {
     log('相机启动失败：' + e.message);
   }
@@ -600,15 +617,20 @@ async function enterCapture() {
 // ---------- 顶栏 / 设置 ----------
 function setMode(m) {
   mode = m;
-  $('modeBtn').textContent = m === 'explanation' ? '讲解' : '陪伴';
+  const sel = $('modeSelect');
+  if (sel) sel.value = m;
 }
 
 $('backBtn').onclick = () => goHome();
-$('modeBtn').onclick = () => setMode(mode === 'companion' ? 'explanation' : 'companion');
-$('homeSettings').onclick = () => {
-  listCameras();
+$('modeSelect').onchange = (e) => setMode(e.target.value);
+function openSettings() {
+  $('modeSelect').value = mode;
   $('settingsPanel').hidden = false;
-};
+}
+$('homeSettings').onclick = openSettings;
+$('readSettings').onclick = openSettings;
+$('flipBtn').onclick = () => flipCamera();
+$('helpBtn').onclick = () => ($('helpPanel').hidden = false);
 orb.addEventListener('click', onOrbTap);
 document.querySelectorAll('[data-close]').forEach((b) => (b.onclick = () => ($(b.dataset.close).hidden = true)));
 document.querySelectorAll('.overlay').forEach((ov) =>
@@ -617,7 +639,7 @@ document.querySelectorAll('.overlay').forEach((ov) =>
   })
 );
 $('pauseBtn').onclick = togglePause;
-$('resumeBtn').onclick = resumeMedia;
+$('pausedVeil').onclick = resumeMedia; // 点暂停画面任意处即恢复
 $('captureBtn').onclick = captureCover;
 $('captureSkip').onclick = addBookBlank;
 $('captureCancel').onclick = () => goHome();
@@ -633,14 +655,13 @@ function buildLangSelects() {
   }
 }
 buildLangSelects();
+$('modeSelect').value = mode;
 $('replyLang').onchange = (e) => localStorage.setItem('replyLang', e.target.value);
-$('cameraSelect').onchange = (e) => startCamera(e.target.value);
-if (navigator.mediaDevices?.addEventListener) navigator.mediaDevices.addEventListener('devicechange', listCameras);
 
 // ---------- 媒体启动（摄像头 + 麦克风）----------
 let mediaStarted = false;
 async function startMedia() {
-  await startCamera($('cameraSelect').value || undefined);
+  await startCamera();
   setupAudioGraph();
   await attachMic(); // 权限被拒会在这里抛错
   mediaStarted = true;
@@ -735,10 +756,6 @@ $('obManualToggle').onclick = () => {
 $('obBookSave').onclick = () => {
   obCreateBook($('obBookTitle').value, $('obBookAuthor').value);
   finishOnboarding();
-};
-$('replayOnboard').onclick = () => {
-  $('settingsPanel').hidden = true;
-  startOnboarding();
 };
 
 // ---------- 启动 ----------

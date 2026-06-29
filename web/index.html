@@ -27,15 +27,18 @@
       <div class="top-bar" id="topBar">
         <button id="backBtn" class="icon-btn" title="返回书房">←</button>
         <span class="book-name" id="bookTitle">未选择书</span>
-        <button id="modeBtn" class="mode-pill" title="切换模式">陪伴</button>
-        <button id="pauseBtn" class="icon-btn" title="暂停摄像头和收音">⏸</button>
+        <button id="readSettings" class="icon-btn" title="设置">⚙</button>
         <span id="liveDot" class="status-dot" title="检查中…"></span>
       </div>
 
       <!-- 语音交互中心 -->
       <div class="orb-wrap" id="orbWrap">
         <div class="caption" id="caption"></div>
-        <div class="orb stopped" id="orb"></div>
+        <div class="orb-row">
+          <button id="pauseBtn" class="side-btn" title="暂停摄像头和收音">⏸</button>
+          <div class="orb stopped" id="orb"></div>
+          <button id="flipBtn" class="side-btn" title="翻转摄像头">🔄</button>
+        </div>
         <div class="orb-label" id="statusText">点一下唤醒</div>
       </div>
 
@@ -48,10 +51,11 @@
         <button id="captureCancel" class="cap-cancel">取消</button>
       </div>
 
-      <!-- 暂停遮罩：大大的恢复按钮放正中间 -->
+      <!-- 暂停：冻结当前画面 + 压暗，正中放蓝色恢复键；顶栏仍可见 -->
       <div class="paused-veil" id="pausedVeil" hidden>
+        <img id="pausedShot" class="paused-shot" alt="" />
         <button id="resumeBtn" class="resume-big">▶</button>
-        <div class="resume-label">已暂停 · 点击恢复</div>
+        <div class="resume-label">已暂停<span class="resume-hint">点画面任意空白处或暂停键即恢复</span></div>
       </div>
     </div>
 
@@ -71,12 +75,30 @@
           </select>
         </label>
         <label class="field">
-          <span>摄像头</span>
-          <select id="cameraSelect"></select>
+          <span>模式</span>
+          <select id="modeSelect">
+            <option value="companion">陪伴模式（只在你问时答）</option>
+            <option value="explanation">讲解模式（带你逐句精读）</option>
+          </select>
         </label>
-        <button class="ghost-btn" id="replayOnboard">↺ 重新观看引导</button>
-        <a class="ghost-btn" href="/dashboard" style="display:block;text-align:center;text-decoration:none">📊 用量后台</a>
-        <div class="log" id="log"></div>
+        <button class="ghost-btn" id="helpBtn">❔ 使用帮助</button>
+        <div class="log" id="log" hidden></div>
+      </div>
+    </div>
+
+    <!-- 使用帮助 -->
+    <div class="overlay" id="helpPanel" hidden>
+      <div class="card">
+        <div class="card-head">
+          <strong>❔ 使用帮助</strong>
+          <button class="icon-btn dark" data-close="helpPanel">✕</button>
+        </div>
+        <ol class="help-list">
+          <li>把摄像头对准你正在读的书页。</li>
+          <li>可以把手机架起来，让摄像头一直拍到你正在读的、摊开的书。</li>
+          <li>随时开口提问——单词、句子、还是背景知识都行，就像一位真人老师正和你一起看这本书。</li>
+          <li><b>陪伴模式</b>：你自己安静读，只在开口问时才答，简短不打扰；<br /><b>讲解模式</b>：像精读老师带你把这一页逐句讲透。</li>
+        </ol>
       </div>
     </div>
 
