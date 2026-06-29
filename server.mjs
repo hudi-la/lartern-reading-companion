@@ -308,6 +308,7 @@ wss.on('connection', (browser, req) => {
           model: MODEL,
           config: {
             responseModalities: [Modality.AUDIO],
+            speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Puck' } } }, // 钉死默认嗓「Puck」，防模型更新后被换掉
             systemInstruction: msg.system || '',
             sessionResumption: handle ? { handle } : {}, // 开启会话续传
             contextWindowCompression: { slidingWindow: {} }, // 压缩上下文以延长会话
