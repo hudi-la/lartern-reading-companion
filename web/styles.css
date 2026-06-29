@@ -141,6 +141,39 @@ body {
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
 }
 
+/* 进入主界面：整体轻轻浮入 */
+.orb-wrap {
+  animation: fadeUp 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 字幕淡入 */
+.caption {
+  transition: opacity 0.4s ease;
+}
+.caption.show {
+  animation: capIn 0.45s ease both;
+}
+@keyframes capIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 0.92;
+    transform: translateY(0);
+  }
+}
+
 /* ===== 呼吸球：5 种状态各有动画 ===== */
 .orb {
   width: 96px;
@@ -149,14 +182,29 @@ body {
   pointer-events: auto;
   cursor: pointer;
   --vol: 0;
-  transition: background 0.35s, box-shadow 0.35s;
+  transition: background 0.45s ease, box-shadow 0.45s ease, opacity 0.45s ease;
+}
+.orb:active {
+  transform: scale(0.93);
 }
 
-/* 停流：灰、静止、半透明 */
+/* 停流：不再死灰静止——缓慢呼吸 + 微浮，邀请点击 */
 .orb.stopped {
-  opacity: 0.45;
-  background: radial-gradient(circle at 50% 38%, rgba(235, 235, 240, 0.85), rgba(120, 120, 130, 0.4));
-  box-shadow: 0 0 18px rgba(255, 255, 255, 0.15);
+  opacity: 0.7;
+  background: radial-gradient(circle at 50% 36%, rgba(240, 240, 246, 0.92), rgba(135, 135, 150, 0.45));
+  box-shadow: 0 0 22px rgba(255, 255, 255, 0.18);
+  animation: idleBreath 4.2s ease-in-out infinite;
+}
+@keyframes idleBreath {
+  0%,
+  100% {
+    transform: scale(0.97) translateY(0);
+    box-shadow: 0 0 18px rgba(255, 255, 255, 0.14);
+  }
+  50% {
+    transform: scale(1.03) translateY(-4px);
+    box-shadow: 0 0 30px rgba(255, 255, 255, 0.26);
+  }
 }
 
 /* live：刚连上、就绪 —— 青色 + 外扩光环 */
@@ -319,24 +367,75 @@ body {
   inset: 0;
   background: rgba(0, 0, 0, 0.55);
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
   z-index: 100;
-  padding: 20px;
+  padding: 0;
+  animation: veilIn 0.28s ease both;
+}
+@keyframes veilIn {
+  from {
+    background: rgba(0, 0, 0, 0);
+  }
+  to {
+    background: rgba(0, 0, 0, 0.55);
+  }
 }
 .overlay[hidden] {
   display: none;
 }
 .card {
   width: 100%;
-  max-width: 380px;
+  max-width: 480px;
   background: #fff;
   color: #1d1d1f;
-  border-radius: 18px;
-  padding: 18px;
+  border-radius: 22px 22px 0 0;
+  padding: 18px 18px max(22px, env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
   gap: 12px;
+  animation: sheetUp 0.36s cubic-bezier(0.2, 0.85, 0.2, 1) both;
+}
+@keyframes sheetUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+@media (min-width: 520px) {
+  .overlay {
+    align-items: center;
+    padding: 20px;
+  }
+  .card {
+    max-width: 400px;
+    border-radius: 20px;
+    animation: sheetPop 0.3s cubic-bezier(0.2, 0.85, 0.2, 1) both;
+  }
+}
+@keyframes sheetPop {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.ghost-btn {
+  border: none;
+  background: #f0f0f3;
+  color: #3a3a3f;
+  border-radius: 10px;
+  padding: 11px;
+  font-size: 14px;
+  cursor: pointer;
+}
+.ghost-btn:active {
+  background: #e4e4e9;
 }
 .card-head {
   display: flex;
@@ -424,4 +523,248 @@ body {
 .log div {
   padding: 2px 0;
   border-bottom: 1px solid #ececef;
+}
+
+/* ===== 首次进门引导 ===== */
+.onboard {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: radial-gradient(130% 120% at 50% 0%, #23252b 0%, #0b0c0e 60%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: max(28px, env(safe-area-inset-top)) 26px max(28px, env(safe-area-inset-bottom));
+  overflow: hidden;
+}
+.onboard[hidden] {
+  display: none;
+}
+.ob-dots {
+  position: absolute;
+  top: max(20px, env(safe-area-inset-top));
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  gap: 7px;
+}
+.ob-dots i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.22);
+  transition: all 0.3s ease;
+}
+.ob-dots i.on {
+  width: 20px;
+  border-radius: 4px;
+  background: #fff;
+}
+.ob-step {
+  width: 100%;
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 16px;
+  animation: obIn 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.ob-step[hidden] {
+  display: none;
+}
+@keyframes obIn {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.ob-title {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0;
+  letter-spacing: 0.5px;
+}
+.ob-text {
+  font-size: 15px;
+  line-height: 1.6;
+  color: #b6b6bf;
+  margin: 0;
+}
+.ob-glyph {
+  font-size: 46px;
+  position: relative;
+  filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.5));
+}
+.ob-glyph span {
+  font-size: 30px;
+  margin-left: -6px;
+  vertical-align: 6px;
+}
+/* 引导里的 Hero 球：复用呼吸动画 + 青色光晕 */
+.ob-orb {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 36%, rgba(140, 255, 240, 0.98), rgba(30, 195, 185, 0.55));
+  box-shadow: 0 0 60px rgba(60, 230, 215, 0.55);
+  animation: idleBreath 3.8s ease-in-out infinite;
+}
+.ob-primary {
+  margin-top: 6px;
+  border: none;
+  border-radius: 26px;
+  padding: 15px 0;
+  width: 100%;
+  max-width: 280px;
+  font-size: 17px;
+  font-weight: 600;
+  background: #fff;
+  color: #16171a;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  transition: transform 0.12s ease;
+}
+.ob-primary:active {
+  transform: scale(0.96);
+}
+.ob-ghost {
+  border: none;
+  background: transparent;
+  color: #9a9aa4;
+  font-size: 14px;
+  padding: 8px;
+  cursor: pointer;
+}
+.ob-hint {
+  font-size: 13px;
+  min-height: 18px;
+  color: #ff7a7a;
+}
+.ob-input {
+  width: 100%;
+  max-width: 280px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.07);
+  color: #fff;
+  border-radius: 12px;
+  padding: 13px 14px;
+  font-size: 15px;
+}
+.ob-input::placeholder {
+  color: #76767e;
+}
+.ob-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 280px;
+}
+.ob-choices button {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.05);
+  color: #e7e7ec;
+  border-radius: 14px;
+  padding: 14px;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.ob-choices button.on {
+  background: #fff;
+  color: #16171a;
+  border-color: #fff;
+  font-weight: 600;
+}
+.ob-howto {
+  list-style: none;
+  padding: 0;
+  margin: 4px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  width: 100%;
+  max-width: 320px;
+  text-align: left;
+}
+.ob-howto li {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 15px;
+  line-height: 1.4;
+  color: #d6d6dd;
+}
+.ob-howto b {
+  color: #fff;
+  font-weight: 600;
+}
+.ob-emoji {
+  font-size: 24px;
+  width: 34px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.ob-howto-orb {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: radial-gradient(circle at 50% 36%, rgba(140, 255, 240, 0.98), rgba(30, 195, 185, 0.55));
+  box-shadow: 0 0 14px rgba(60, 230, 215, 0.6);
+}
+.ob-manual {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 280px;
+  margin-top: 4px;
+}
+.ob-manual[hidden] {
+  display: none;
+}
+.ob-langpick {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.05);
+  color: #e7e7ec;
+  border-radius: 14px;
+  padding: 12px 14px;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.ob-langpick.on {
+  background: #fff;
+  color: #16171a;
+  border-color: #fff;
+  font-weight: 600;
+}
+.ob-langpick span {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.ob-langpick select {
+  background: rgba(255, 255, 255, 0.14);
+  color: inherit;
+  border: none;
+  border-radius: 8px;
+  padding: 7px 8px;
+  font-size: 14px;
+  flex: 1;
+  min-width: 0;
+}
+.ob-langpick.on select {
+  background: rgba(0, 0, 0, 0.06);
+  color: #16171a;
 }

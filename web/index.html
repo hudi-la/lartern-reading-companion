@@ -79,8 +79,68 @@
           <span>摄像头</span>
           <select id="cameraSelect"></select>
         </label>
+        <button class="ghost-btn" id="replayOnboard">↺ 重新观看引导</button>
         <div class="log" id="log"></div>
       </div>
+    </div>
+
+    <!-- 首次进门引导 -->
+    <div class="onboard" id="onboarding" hidden>
+      <div class="ob-dots" id="obDots"></div>
+
+      <section class="ob-step" data-step="0">
+        <div class="ob-orb"></div>
+        <h1 class="ob-title">阅读陪伴</h1>
+        <p class="ob-text">举起手机，对着纸质书的一页。<br />像有位英语精读老师坐在你身边，随问随答、随手讲解。</p>
+        <button class="ob-primary" data-next>开始</button>
+      </section>
+
+      <section class="ob-step" data-step="1" hidden>
+        <div class="ob-glyph">📷<span>🎙️</span></div>
+        <h2 class="ob-title">需要摄像头和麦克风</h2>
+        <p class="ob-text">用来看你的书页、听你提问。<br />只在唤醒后开启，画面和声音都不保存。</p>
+        <button class="ob-primary" id="obPermBtn">允许访问</button>
+        <div class="ob-hint" id="obPermHint"></div>
+      </section>
+
+      <section class="ob-step" data-step="2" hidden>
+        <div class="ob-glyph">🌐</div>
+        <h2 class="ob-title">希望我用哪种语言回答？</h2>
+        <p class="ob-text">随时能在设置里改。</p>
+        <div class="ob-choices" id="obLang">
+          <button type="button" data-lang="auto" class="on">跟随我提问的语言</button>
+          <div class="ob-langpick" id="obLangPick">
+            <span>指定语言</span>
+            <select id="obLangSelect"></select>
+          </div>
+        </div>
+        <button class="ob-primary" data-next>下一步</button>
+      </section>
+
+      <section class="ob-step" data-step="3" hidden>
+        <h2 class="ob-title">怎么用</h2>
+        <ul class="ob-howto">
+          <li><span class="ob-emoji">📱</span><div><b>架起手机</b>更方便——找个支架或靠着东西立住，腾出手翻书。</div></li>
+          <li><span class="ob-howto-orb"></span><div><b>点中间的球</b>唤醒，再点一下停下。</div></li>
+          <li><span class="ob-emoji">🗣️</span><div><b>直接开口</b>提问，它说话时你也能随时插话打断。</div></li>
+          <li><span class="ob-emoji">🔄</span><div><b>两种模式</b>：陪伴（只在你问时答）/ 讲解（带你逐句精读）。</div></li>
+          <li><span class="ob-emoji">⏸</span><div><b>暂停</b>会关掉摄像头麦克风，省电省钱，恢复时接着聊。</div></li>
+        </ul>
+        <button class="ob-primary" data-next>下一步</button>
+      </section>
+
+      <section class="ob-step" data-step="4" hidden>
+        <div class="ob-glyph">📚</div>
+        <h2 class="ob-title">最后，加一本书</h2>
+        <p class="ob-text">对准书的封面拍一张，自动认出书名。<br />每本书会单独记住上下文。</p>
+        <button class="ob-primary" id="obBookScan">📷 扫封面识别</button>
+        <button class="ob-ghost" id="obManualToggle">改用手动填写</button>
+        <div class="ob-manual" id="obManual" hidden>
+          <input id="obBookTitle" class="ob-input" placeholder="书名" />
+          <input id="obBookAuthor" class="ob-input" placeholder="作者（可选）" />
+          <button class="ob-primary" id="obBookSave">保存，开始阅读</button>
+        </div>
+      </section>
     </div>
 
     <canvas id="captureCanvas" hidden></canvas>
