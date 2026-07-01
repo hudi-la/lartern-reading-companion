@@ -97,15 +97,23 @@ function syncBooksUp(books) {
 }
 // 启动时拉云端，与本地按 id 取并集：云端是主，但本地离线加的书也补回去，谁都不丢
 async function pullBooks() {
-  let server;
+  let server, user;
   try {
     const r = await fetch('/books');
     if (!r.ok) return; // 未登录/离线 → 用本地
-    server = (await r.json()).books;
+    const j = await r.json();
+    server = j.books;
+    user = j.user;
   } catch {
     return;
   }
   if (!Array.isArray(server)) return;
+  // 账号切换（本地 ?as=xxx 测试用）→ 清掉上个账号的本地缓存，从干净状态走该账号的引导流程
+  if (user && localStorage.getItem('lastUser') !== user) {
+    localStorage.removeItem('books');
+    localStorage.removeItem('onboarded');
+    localStorage.setItem('lastUser', user);
+  }
   const byId = new Map();
   for (const b of server) if (b && b.id) byId.set(b.id, b);
   let localOnly = false;

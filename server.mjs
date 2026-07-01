@@ -53,11 +53,24 @@ function parseCookies(req) {
   });
   return out;
 }
+// 仅「本机直连」（回环地址且未经反向代理）时，允许 ?as= 写入的 rc_as 覆盖用户名，用来在本地测新用户初次流程。
+// 线上跑在 Render 反代后面（会带 x-forwarded-*），一律不认，杜绝被绕过登录。
+function localDirect(req) {
+  const ip = (req.socket && req.socket.remoteAddress) || '';
+  const loopback = ip === '::1' || ip === '127.0.0.1' || ip === '::ffff:127.0.0.1';
+  return loopback && !req.headers['x-forwarded-for'] && !req.headers['x-forwarded-proto'];
+}
+function devAs(req) {
+  return localDirect(req) ? decodeURIComponent(parseCookies(req).rc_as || '') : '';
+}
 function isAuthed(req) {
   if (!AUTH_ON) return true; // 没配用户 = 放行（本地开发）
+  if (devAs(req)) return true; // 本机 ?as= 测试会话放行
   return TOKEN_TO_USER.has(parseCookies(req).rc_auth || '');
 }
 function getUser(req) {
+  const as = devAs(req);
+  if (as) return as; // 本机 ?as= 覆盖：测新用户用
   if (!AUTH_ON) return '本机';
   return TOKEN_TO_USER.get(parseCookies(req).rc_auth || '') || '匿名';
 }
@@ -216,6 +229,24 @@ const app = express();
 app.set('trust proxy', 1); // 云端在反代后面，识别 https
 app.use(express.json({ limit: '12mb' })); // 封面图片走 JSON body
 
+// 开发便捷：本机直连时，访问 localhost/?as=test1 就切到一个全新空账号（写 rc_as cookie，之后所有接口/WS 都带上），
+// ?as= 或 ?as=本机 恢复默认。放在门禁之前，并顺手改本次请求的 cookie，使首个 ?as 页面不被弹去登录页。线上（反代）忽略。
+app.use((req, res, next) => {
+  if (localDirect(req) && typeof req.query.as === 'string') {
+    const name = req.query.as.trim();
+    const rest = (req.headers.cookie || '').split(';').filter((p) => !p.trim().startsWith('rc_as='));
+    if (!name || name === '本机') {
+      res.setHeader('Set-Cookie', 'rc_as=; Path=/; Max-Age=0; SameSite=Lax');
+      req.headers.cookie = rest.join(';');
+    } else {
+      const v = encodeURIComponent(name);
+      res.setHeader('Set-Cookie', `rc_as=${v}; Path=/; Max-Age=2592000; SameSite=Lax`);
+      req.headers.cookie = [...rest, ` rc_as=${v}`].join(';').replace(/^;\s*/, '');
+    }
+  }
+  next();
+});
+
 // 登录页与校验（在门禁之前注册，未登录也能访问）
 app.get('/login', (req, res) => res.sendFile(path.join(__dirname, 'web', 'login.html')));
 app.post('/login', (req, res) => {
@@ -267,7 +298,7 @@ app.post('/identify', async (req, res) => {
 
 // 云端书库：按登录用户读/写自己的书（换设备、清缓存都还在）
 app.get('/books', (req, res) => {
-  res.json({ ok: true, books: libraryByUser.get(getUser(req)) || [] });
+  res.json({ ok: true, user: getUser(req), books: libraryByUser.get(getUser(req)) || [] });
 });
 app.put('/books', async (req, res) => {
   const user = getUser(req);
