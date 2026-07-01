@@ -177,6 +177,10 @@ body {
   gap: 18px;
   pointer-events: none;
 }
+/* display:flex 会盖掉 [hidden] 的 display:none，拍封面时必须显式藏起来 */
+.orb-wrap[hidden] {
+  display: none;
+}
 .caption {
   max-width: 80%;
   max-height: 26vh;
