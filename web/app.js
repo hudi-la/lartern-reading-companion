@@ -1,6 +1,11 @@
 // 实时客户端：唤醒后开流 → 麦克风(16kHz PCM)+摄像头(0.5fps JPEG) → Gemini Live → 播放它的语音(24kHz)
 // 状态机：stopped / live / listening(听) / thinking(思考) / speaking(讲解)，各有不同的呼吸球动画
 const $ = (id) => document.getElementById(id);
+// 暂停键在「暂停(⏸)/恢复(▶)」之间切换——用内联 Lucide SVG，和其余功能图标保持一致
+const ICON_PAUSE =
+  '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/></svg>';
+const ICON_PLAY =
+  '<svg class="ic" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v16l13-8z"/></svg>';
 // 回答语言：核心是英美英语学习者（第二语言为英语、阅读吃力）人群的母语 Top5 —— 西/中/阿/波兰/乌尔都，外加常见几种
 const REPLY_LANGS = [
   { v: 'zh', label: '中文', name: '中文' },
@@ -336,14 +341,14 @@ function pauseMedia() {
   camStream = null;
   micStream = null;
   paused = true;
-  $('pauseBtn').textContent = '▶';
+  $('pauseBtn').innerHTML = ICON_PLAY;
   $('pauseBtn').title = '恢复摄像头和收音';
   $('pausedVeil').hidden = false;
   log('已暂停：摄像头与麦克风已关');
 }
 async function resumeMedia() {
   $('pausedVeil').hidden = true;
-  $('pauseBtn').textContent = '⏸';
+  $('pauseBtn').innerHTML = ICON_PAUSE;
   $('pauseBtn').title = '暂停摄像头和收音';
   paused = false;
   try {
@@ -663,7 +668,7 @@ function stopAllMedia() {
   mediaStarted = false;
   paused = false;
   $('pausedVeil').hidden = true;
-  $('pauseBtn').textContent = '⏸';
+  $('pauseBtn').innerHTML = ICON_PAUSE;
   try {
     video.srcObject = null;
   } catch {}
