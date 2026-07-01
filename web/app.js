@@ -80,20 +80,117 @@ function loadBooks() {
 }
 function saveBooks(books) {
   localStorage.setItem('books', JSON.stringify(books));
+  syncBooksUp(books); // 本地存一份做离线缓存，同时推云端
+}
+// ---------- 云端书库同步 ----------
+let _syncTimer = null;
+function syncBooksUp(books) {
+  clearTimeout(_syncTimer);
+  _syncTimer = setTimeout(() => {
+    fetch('/books', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ books }) }).catch(() => {});
+  }, 400); // 攒一下再传，避免连点连传
+}
+// 启动时拉云端，与本地按 id 取并集：云端是主，但本地离线加的书也补回去，谁都不丢
+async function pullBooks() {
+  let server;
+  try {
+    const r = await fetch('/books');
+    if (!r.ok) return; // 未登录/离线 → 用本地
+    server = (await r.json()).books;
+  } catch {
+    return;
+  }
+  if (!Array.isArray(server)) return;
+  const byId = new Map();
+  for (const b of server) if (b && b.id) byId.set(b.id, b);
+  let localOnly = false;
+  for (const b of loadBooks()) if (b && b.id && !byId.has(b.id)) { byId.set(b.id, b); localOnly = true; }
+  const merged = [...byId.values()];
+  localStorage.setItem('books', JSON.stringify(merged)); // 直接写，避免又触发上传
+  if (server.length) localStorage.setItem('onboarded', '1'); // 云端已有书=老用户，换设备别再走引导
+  if (localOnly) syncBooksUp(merged); // 本地有、云端没有的，补回云端
 }
 function setBookTitle() {
   $('bookTitle').textContent = currentBook ? currentBook.title : '未选择书';
 }
-const PALETTE = ['#7b6cf6', '#e0567a', '#2f9e6f', '#d98a2b', '#3a6ea5', '#8a5a44'];
+// ---------- 程序化封面 ----------
+// 标题+作者 → 稳定 hash → 查“配色 / 纹理 / 排版”表。同一本书永远同一张封面，
+// 每套配色都是手挑过的，所以怎么选都好看；真图方案以后可作为可选增强图层叠加。
+function hashStr(s) {
+  let h = 0;
+  for (const ch of String(s)) h = (h * 31 + ch.charCodeAt(0)) | 0;
+  return Math.abs(h);
+}
+// 渐变封面：每套都是三色渐变 + 字色 + 分隔线色 + 衬线/无衬线（字体也跟着变，更耐看）
+const COVER_THEMES = [
+  { g: ['#1a2a6c', '#6a1b3d', '#d4a017'], ink: '#fff',    rule: '#d4a017', font: 'cv-serif' },
+  { g: ['#0f2027', '#203a43', '#2c5364'], ink: '#eaf2f4', rule: '#5fb0c4', font: 'cv-sans'  },
+  { g: ['#f0f3f8', '#dbe2ef', '#c3cfe2'], ink: '#1a1f2e', rule: '#6b7a99', font: 'cv-serif' },
+  { g: ['#41295a', '#642b73', '#c6426e'], ink: '#fff',    rule: '#f0a6c0', font: 'cv-serif' },
+  { g: ['#16161a', '#3a2a1a', '#d98a2b'], ink: '#fdf3e3', rule: '#d98a2b', font: 'cv-serif' },
+  { g: ['#0b3d2e', '#15634a', '#3f9e6f'], ink: '#eaf6ef', rule: '#7fd0a8', font: 'cv-sans'  },
+  { g: ['#1f2430', '#33405a', '#5b7aa8'], ink: '#eef2f8', rule: '#8aa6d0', font: 'cv-serif' },
+  { g: ['#2b1a3d', '#4a2c6d', '#7b5cc4'], ink: '#f0eaf7', rule: '#b99cf0', font: 'cv-sans'  },
+  { g: ['#3a1212', '#6e2222', '#b85c3c'], ink: '#f7e9e0', rule: '#e0936b', font: 'cv-serif' },
+  { g: ['#102a26', '#1d4d44', '#3a8f7a'], ink: '#e8f5f0', rule: '#74c7b0', font: 'cv-serif' },
+  { g: ['#0d1b3a', '#1c3a6e', '#2f9fb5'], ink: '#e6f4f8', rule: '#5fc4d8', font: 'cv-sans'  },
+  { g: ['#1a0e14', '#4a1f33', '#9c3b5a'], ink: '#f7e6ec', rule: '#d98aa6', font: 'cv-serif' },
+];
+// “企鹅式”色带封面：上下实色带 + 中间米白，最像正经出版书
+const BAND_THEMES = [
+  { band: '#e2552f', ink: '#fff' },
+  { band: '#2f5d62', ink: '#fff' },
+  { band: '#1c1c22', ink: '#fff' },
+  { band: '#7a3b69', ink: '#fff' },
+  { band: '#3a6ea5', ink: '#fff' },
+];
+// 纹理层：噪点 / 圆点 / 斜纹 / 网格 / 波纹，外加少量留白
+const COVER_PATTERNS = ['cv-grain', 'cv-dots', 'cv-diag', 'cv-grid', 'cv-waves', 'cv-none'];
+// 阅读对象类型：不只出版书，文章/书稿都给个角标，混合书架一眼分得清来源
+const TYPE_META = {
+  book:    { label: 'BOOK',    icon: '📖' },
+  article: { label: 'ARTICLE', icon: '📄' },
+  draft:   { label: 'DRAFT',   icon: '✍️' },
+};
+// 标题长度 → 字号档（CJK 字符算约 1.7 倍宽）
+function titleLenClass(title) {
+  const len = [...String(title)].reduce((n, c) => n + (c.charCodeAt(0) > 255 ? 1.7 : 1), 0);
+  return len <= 7 ? 'cv-t1' : len <= 14 ? 'cv-t2' : len <= 24 ? 'cv-t3' : 'cv-t4';
+}
+function buildCover(card, b) {
+  const seed = hashStr((b.title || '') + (b.author || ''));
+  const type = TYPE_META[b.type] || TYPE_META.book;
+  const title = b.title || '未命名';
+  const badge = `<span class="cv-badge">${type.icon} ${type.label}</span>`;
+  const titleEl = `<div class="cv-title ${titleLenClass(title)}">${esc(title)}</div>`;
+  const authorEl = b.author ? `<div class="cv-author">${esc(b.author)}</div>` : '';
+  // 约 1/5 的“书”走企鹅式色带，拉开和渐变款的差异
+  if ((b.type || 'book') === 'book' && seed % 5 === 0) {
+    const t = BAND_THEMES[seed % BAND_THEMES.length];
+    card.className = 'book-card cv-band cv-serif';
+    card.style.cssText = `--band:${t.band};--ink:${t.ink};`;
+    card.innerHTML =
+      `<div class="cv-band-top">${badge}</div>` +
+      `<div class="cv-band-mid">${titleEl}</div>` +
+      `<div class="cv-band-bot">${b.author ? esc(b.author) : '&nbsp;'}</div>`;
+    return;
+  }
+  const t = COVER_THEMES[seed % COVER_THEMES.length];
+  const angle = 130 + ((seed >> 3) % 6) * 10;
+  const pat = COVER_PATTERNS[(seed >> 5) % COVER_PATTERNS.length];
+  card.className = `book-card ${pat} ${t.font}`;
+  card.style.cssText = `background:linear-gradient(${angle}deg,${t.g.join(',')});color:${t.ink};`;
+  card.innerHTML =
+    badge + '<div class="cv-spacer"></div>' + titleEl +
+    `<div class="cv-rule" style="background:${t.rule}"></div>` + authorEl;
+}
 function renderLibrary() {
   const books = loadBooks();
   const grid = $('homeGrid');
   grid.innerHTML = '';
-  books.forEach((b, i) => {
+  books.forEach((b) => {
     const c = document.createElement('div');
-    c.className = 'book-card';
-    c.style.background = `linear-gradient(160deg, ${PALETTE[i % PALETTE.length]}, rgba(0,0,0,0.55))`;
-    c.innerHTML = `<div class="b-title">${esc(b.title)}</div>` + (b.author ? `<div class="b-author">${esc(b.author)}</div>` : '');
+    buildCover(c, b);
     c.onclick = () => enterBook(b);
     grid.appendChild(c);
   });
@@ -769,6 +866,8 @@ $('obBookSave').onclick = () => {
       $('liveDot').title = '未设置 GEMINI_API_KEY';
     }
   } catch {}
+
+  await pullBooks(); // 先把云端书库拉下来合并，再决定落点
 
   const books = loadBooks();
   const cur = localStorage.getItem('currentBook');

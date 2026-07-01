@@ -12,3 +12,11 @@ create table if not exists usage (
   started_at   timestamptz,
   updated_at   timestamptz default now()
 );
+
+-- 云端书库：每个用户一行，books 是整份书数组（和前端 localStorage 同构）。
+-- 换设备、清浏览器缓存都不丢；服务端按登录用户名读写。
+create table if not exists library (
+  username   text primary key,
+  books      jsonb       default '[]'::jsonb,
+  updated_at timestamptz default now()
+);

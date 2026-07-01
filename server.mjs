@@ -137,6 +137,42 @@ setInterval(() => {
   dirtyUsers.clear();
 }, 15000).unref?.();
 
+// ===== 云端书库（按用户存一份书数组，换设备/清缓存也不丢；存 Supabase，没配则本地文件）=====
+const libraryByUser = new Map();
+const LIBRARY_FILE = path.join(__dirname, 'data', 'library.json');
+function saveLibraryLocal() {
+  try {
+    fs.mkdirSync(path.dirname(LIBRARY_FILE), { recursive: true });
+    fs.writeFileSync(LIBRARY_FILE, JSON.stringify(Object.fromEntries(libraryByUser)));
+  } catch {}
+}
+async function loadLibrary() {
+  if (supa) {
+    const { data, error } = await supa.from('library').select('*');
+    if (error) return console.error('Supabase 读取书库失败:', error.message);
+    for (const r of data || []) libraryByUser.set(r.username, Array.isArray(r.books) ? r.books : []);
+    console.log(`书库已从 Supabase 载入：${libraryByUser.size} 个用户`);
+  } else {
+    try {
+      if (fs.existsSync(LIBRARY_FILE))
+        for (const [n, books] of Object.entries(JSON.parse(fs.readFileSync(LIBRARY_FILE, 'utf8'))))
+          if (Array.isArray(books)) libraryByUser.set(n, books);
+    } catch {}
+  }
+}
+async function flushLibrary(name) {
+  const books = libraryByUser.get(name) || [];
+  if (supa) {
+    const { error } = await supa
+      .from('library')
+      .upsert({ username: name, books, updated_at: new Date().toISOString() }, { onConflict: 'username' });
+    if (error) console.error('Supabase 写入书库失败:', error.message);
+  } else {
+    saveLibraryLocal();
+  }
+}
+loadLibrary();
+
 let usageLogged = false;
 function extractBreakdown(meta) {
   const bd = emptyUsage();
@@ -227,6 +263,18 @@ app.post('/identify', async (req, res) => {
   } catch (e) {
     res.json({ ok: false, error: e?.message || String(e) });
   }
+});
+
+// 云端书库：按登录用户读/写自己的书（换设备、清缓存都还在）
+app.get('/books', (req, res) => {
+  res.json({ ok: true, books: libraryByUser.get(getUser(req)) || [] });
+});
+app.put('/books', async (req, res) => {
+  const user = getUser(req);
+  const books = Array.isArray(req.body?.books) ? req.body.books : [];
+  libraryByUser.set(user, books);
+  await flushLibrary(user);
+  res.json({ ok: true, count: books.length });
 });
 
 // 用量看板数据

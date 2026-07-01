@@ -545,25 +545,104 @@ body {
   gap: 12px;
 }
 .book-card {
-  aspect-ratio: 3 / 4;
+  aspect-ratio: 2 / 3;
   border-radius: 12px;
-  padding: 12px;
+  padding: 8% 7%;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
   cursor: pointer;
   color: #fff;
+  position: relative;
+  overflow: hidden;
+  container-type: inline-size;
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
 }
-.book-card .b-title {
-  font-size: 14px;
+/* ===== 程序化封面 ===== */
+.book-card > * { position: relative; z-index: 2; }
+.cv-serif { font-family: Georgia, "Songti SC", "Times New Roman", serif; }
+.cv-sans  { font-family: -apple-system, "PingFang SC", system-ui, sans-serif; }
+.cv-spacer { flex: 1; }
+.cv-badge {
+  display: inline-block;
+  align-self: flex-start;
+  font-size: 7cqw;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   font-weight: 600;
-  line-height: 1.3;
+  line-height: 1;
+  padding: 2.6cqw 5cqw;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+  font-family: -apple-system, sans-serif;
 }
-.book-card .b-author {
-  font-size: 11px;
-  opacity: 0.85;
-  margin-top: 3px;
+.cv-title {
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+  word-break: break-word;
+}
+.cv-t1 { font-size: 21cqw; }
+.cv-t2 { font-size: 15cqw; }
+.cv-t3 { font-size: 11cqw; }
+.cv-t4 { font-size: 8.5cqw; }
+.cv-author {
+  margin-top: 3cqw;
+  font-size: 6.3cqw;
+  opacity: 0.8;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  font-family: -apple-system, sans-serif;
+}
+.cv-rule {
+  width: 14cqw;
+  height: 1.5cqw;
+  min-height: 2px;
+  border-radius: 2px;
+  margin-top: 5cqw;
+  opacity: 0.9;
+}
+/* 纹理层（::after）：噪点 / 圆点 / 斜纹 / 网格 / 波纹 */
+.cv-grain::after, .cv-dots::after, .cv-diag::after,
+.cv-grid::after, .cv-waves::after {
+  content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+}
+.cv-grain::after {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.16; mix-blend-mode: overlay;
+}
+.cv-dots::after {
+  background-image: radial-gradient(rgba(255,255,255,0.5) 1.2px, transparent 1.3px);
+  background-size: 14px 14px; opacity: 0.14; mix-blend-mode: soft-light;
+}
+.cv-diag::after {
+  background-image: repeating-linear-gradient(45deg, rgba(255,255,255,0.5) 0 1px, transparent 1px 11px);
+  opacity: 0.09; mix-blend-mode: soft-light;
+}
+.cv-grid::after {
+  background-image:
+    linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px);
+  background-size: 22px 22px; opacity: 0.08; mix-blend-mode: soft-light;
+}
+.cv-waves::after {
+  background-image: repeating-radial-gradient(circle at 50% -20%, transparent 0 18px, rgba(255,255,255,0.5) 18px 19px);
+  opacity: 0.1; mix-blend-mode: soft-light;
+}
+.cv-none::after { content: none; }
+/* 企鹅式色带封面 */
+.cv-band { padding: 0; background: #f4efe6; }
+.cv-band-top { background: var(--band); color: var(--ink); padding: 6% 7%; }
+.cv-band-top .cv-badge { background: rgba(0, 0, 0, 0.16); }
+.cv-band-mid {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  text-align: center; padding: 9% 8%;
+}
+.cv-band-mid .cv-title { color: #1c1c1c; }
+.cv-band-bot {
+  background: var(--band); color: var(--ink); padding: 5% 7%;
+  font-size: 6.3cqw; letter-spacing: 0.05em; text-transform: uppercase;
+  font-family: -apple-system, sans-serif; line-height: 1.2;
 }
 .book-card.add {
   background: #f0f0f3;
