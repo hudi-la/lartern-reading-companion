@@ -367,6 +367,17 @@ body {
 .cap-btn:disabled {
   opacity: 0.6;
 }
+/* 拍封面时的手动填写：识别不出/懒得拍就直接输书名 */
+.cap-manual {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 300px;
+}
+.cap-manual[hidden] {
+  display: none;
+}
 .cap-skip,
 .cap-cancel {
   border: none;

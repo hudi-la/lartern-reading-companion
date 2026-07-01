@@ -46,8 +46,13 @@
       <div class="capture-bar" id="captureBar" hidden>
         <div class="cap-frame"></div>
         <div class="cap-text" id="capText">把书的封面对准画面，点下方拍摄</div>
+        <div class="cap-manual" id="capManual" hidden>
+          <input id="capBookTitle" class="ob-input" placeholder="书名" />
+          <input id="capBookAuthor" class="ob-input" placeholder="作者（可选）" />
+          <button id="capBookSave" class="cap-btn">保存，加入书房</button>
+        </div>
         <button id="captureBtn" class="cap-btn"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>拍摄封面</button>
-        <button id="captureSkip" class="cap-skip" hidden>识别不出？先建一本空书</button>
+        <button id="capManualToggle" class="cap-skip">识别不出？手动填写书名</button>
         <button id="captureCancel" class="cap-cancel">取消</button>
       </div>
 

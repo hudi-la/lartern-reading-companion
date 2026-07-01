@@ -367,13 +367,33 @@ function togglePause() {
 function openCoverScan() {
   if (paused) resumeMedia();
   $('orbWrap').hidden = true;
-  $('captureSkip').hidden = true;
+  resetCaptureManual();
   $('capText').textContent = '把书的封面对准画面，点下方拍摄';
   $('captureBar').hidden = false;
 }
 function exitCoverScan() {
   $('captureBar').hidden = true;
   $('orbWrap').hidden = false;
+}
+// 手动填写面板：收起、清空，回到「拍摄封面 + 手动填写」两个入口
+function resetCaptureManual() {
+  $('capManual').hidden = true;
+  $('captureBtn').hidden = false;
+  $('capManualToggle').hidden = false;
+  $('capBookTitle').value = '';
+  $('capBookAuthor').value = '';
+}
+// 展开手动填写：藏掉拍摄入口，露出书名/作者输入
+function openCaptureManual() {
+  $('capManual').hidden = false;
+  $('captureBtn').hidden = true;
+  $('capManualToggle').hidden = true;
+  $('capText').textContent = '手动填写书名（作者可留空）';
+  $('capBookTitle').focus();
+}
+// 手动保存：留空则等于建一本空书
+function addBookManual() {
+  saveNewBook({ title: $('capBookTitle').value.trim() || '未命名的书', author: $('capBookAuthor').value.trim() });
 }
 async function captureCover() {
   const img = captureFrameBase64(1024);
@@ -389,15 +409,12 @@ async function captureCover() {
     ).json();
     $('captureBtn').disabled = false;
     if (!res.ok || !res.data || !res.data.title) {
-      $('capText').textContent = '没认出书名，换个角度/光线再拍一次';
-      $('captureSkip').hidden = false;
+      $('capText').textContent = '没认出书名，换个角度重拍，或点下方手动填写';
       return;
     }
     saveNewBook(res.data);
   } catch (e) {
-    $('captureBtn').disabled = false;
-    $('capText').textContent = '识别失败：' + e.message;
-    $('captureSkip').hidden = false;
+    $('capText').textContent = '识别失败：' + e.message + '，可重拍或手动填写';
   }
 }
 function bgText(d) {
@@ -435,17 +452,6 @@ function saveNewBook(d) {
   resumeHandle = null;
   setBookTitle();
   goHome(`已加入书房：《${book.title}》 · 点开它开始读`);
-}
-function addBookBlank() {
-  const books = loadBooks();
-  const book = { id: 'b' + Date.now(), title: '未命名的书', author: '', background: '' };
-  books.unshift(book);
-  saveBooks(books);
-  currentBook = book;
-  localStorage.setItem('currentBook', book.id);
-  resumeHandle = null;
-  setBookTitle();
-  goHome('已建一本空书 · 点开它，对准封面可重拍识别');
 }
 function downsampleTo16k(float32, inRate) {
   if (inRate === 16000) return float32;
@@ -676,7 +682,7 @@ function stopAllMedia() {
 function goHome(hint) {
   stopAllMedia();
   $('captureBar').hidden = true;
-  $('captureSkip').hidden = true;
+  resetCaptureManual();
   $('orbWrap').hidden = false;
   $('topBar').hidden = false;
   $('readingScreen').hidden = true;
@@ -743,7 +749,8 @@ document.querySelectorAll('.overlay').forEach((ov) =>
 $('pauseBtn').onclick = togglePause;
 $('pausedVeil').onclick = resumeMedia; // 点暂停画面任意处即恢复
 $('captureBtn').onclick = captureCover;
-$('captureSkip').onclick = addBookBlank;
+$('capManualToggle').onclick = openCaptureManual;
+$('capBookSave').onclick = addBookManual;
 $('captureCancel').onclick = () => goHome();
 function buildLangSelects() {
   $('replyLang').innerHTML =
