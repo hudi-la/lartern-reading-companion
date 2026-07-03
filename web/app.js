@@ -112,6 +112,8 @@ async function pullBooks() {
   if (user && localStorage.getItem('lastUser') !== user) {
     localStorage.removeItem('books');
     localStorage.removeItem('onboarded');
+    localStorage.removeItem('readerProfile');
+    readerProfile = null;
     localStorage.setItem('lastUser', user);
   }
   const byId = new Map();
@@ -122,6 +124,19 @@ async function pullBooks() {
   localStorage.setItem('books', JSON.stringify(merged)); // 直接写，避免又触发上传
   if (server.length) localStorage.setItem('onboarded', '1'); // 云端已有书=老用户，换设备别再走引导
   if (localOnly) syncBooksUp(merged); // 本地有、云端没有的，补回云端
+}
+// 拉取读者画像（seed）；云端有就以云端为准，落一份到本地缓存
+async function pullProfile() {
+  try {
+    const r = await fetch('/profile');
+    if (!r.ok) return;
+    const j = await r.json();
+    const seed = j && j.seed;
+    if (seed && (seed.level || (Array.isArray(seed.painpoints) && seed.painpoints.length))) {
+      readerProfile = seed;
+      localStorage.setItem('readerProfile', JSON.stringify(seed));
+    }
+  } catch {}
 }
 function setBookTitle() {
   $('bookTitle').textContent = currentBook ? currentBook.title : '未选择书';
@@ -217,6 +232,33 @@ function esc(s) {
   return String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 }
 
+// ---------- 读者画像（onboarding 选的 seed；纯描述，两个模式都注入）----------
+function loadProfileLocal() {
+  try {
+    return JSON.parse(localStorage.getItem('readerProfile') || 'null');
+  } catch {
+    return null;
+  }
+}
+let readerProfile = loadProfileLocal();
+// 纯描述读者，不规定 AI 动作；两个模式共用，由模式各自的行为规则去消化
+const LEVEL_DESC = {
+  A: '词汇量较浅，四级左右的词就开始吃力，生僻词基本不认识。',
+  B: '掌握日常高频词，生词多是进阶书面词（读原版常遇、超出课本核心的那类）。',
+  C: '词汇量不错，只有较低频或学术词才会卡。',
+  D: '接近母语水平，词义几乎不构成障碍。',
+};
+const PAIN_DESC = { 生词: '生词', 长句: '长难句', 文化: '文化梗和典故', 文体: '方言、古旧或特殊文体', 专业: '专业词汇' };
+function profileClause() {
+  const p = readerProfile;
+  if (!p) return '';
+  let s = '';
+  if (p.level && LEVEL_DESC[p.level]) s += LEVEL_DESC[p.level];
+  const pains = (p.painpoints || []).map((k) => PAIN_DESC[k]).filter(Boolean);
+  if (pains.length) s += '读英文书时容易卡在：' + pains.join('、') + '。';
+  return s ? `这位读者的情况：${s}` : '';
+}
+
 // ---------- 系统指令（书背景 + 模式）----------
 function buildSystem() {
   const bg = currentBook && currentBook.background ? `这本书的背景资料：${currentBook.background} ` : '';
@@ -235,17 +277,23 @@ function buildSystem() {
   }
   const common =
     `你是一个「阅读陪伴」助手，读者举着摄像头对着一本纸质书的一页，你能实时看到画面。${book}` +
-    `默认以整页文字为准，画面里即使有手指也别假设他在问那里，除非他明确说"我指的这里/这个词"。` +
+    `你主要作为语言老师给出指导。读者用手指指着某个词或某一行问时，就以他指尖所指的地方为准；没有明确所指时，以整页文字为准，也留意画面里的插图。` +
     `用自然口语回答、适合听，不要念清单式 1234，不要说"根据画面"。${lang}`;
   if (mode === 'explanation') {
     return (
       common +
-      `现在是【讲解模式】，你是一位地道、口语化的英语精读老师，一对一带读者读这一页。` +
-      `从这页最上面按顺序往下讲：简单句直接读过，复杂句读出原文、给自然中文意思、讲清地道表达/固定搭配/语法结构；` +
-      `长难句帮他拆主干和修饰；顺手点 2-3 个难词在语境里的意思。讲透一两点即可，别面面俱到。讲完邀请他提问或翻下一页。`
+      `现在是【精读模式】，你是一位地道、口语化的英语精读老师，和读者一起对着这一页，一对一带读者读这一页。` +
+      `开场先读出这一页的第一句——说"这一页从……开始"，然后把球抛给他：请他读下一句、或说说这句大概什么意思。` +
+      `之后一句一句往下：他读或答完，顺就肯定一下、带到下一句；卡在某个词读不出来就帮他读、点一下意思；读错或理解偏了就轻轻纠正；难句他答不上来，再简短帮他拆一下，别长篇。` +
+      `每次只推进一两句，给他开口的空档；他问你就答。自然口语、简短，像坐在他旁边陪他读。` +
+      profileClause()
     );
   }
-  return common + `现在是【陪伴模式】：读者自己安静读，只有他开口问你才答；回答简短直接，只答所问，不主动延伸、不打断他。`;
+  return (
+    common +
+    `现在是【陪伴模式】：读者自己安静读，只有他开口问你才答；回答简短直接，只答所问，不主动延伸、不打断他、不邀请提问。` +
+    profileClause()
+  );
 }
 
 // ---------- 摄像头 + 抓帧 ----------
@@ -580,12 +628,12 @@ async function wake() {
       const f = captureFrameBase64();
       if (f && ws && ws.readyState === 1) ws.send(JSON.stringify({ type: 'video', data: f }));
     }, 2000);
-    // 讲解模式：只有「全新开始(没有续传句柄)」且你没先开口时才自动开讲，且不强制从头
+    // 精读模式：只有「全新开始(没有续传句柄)」且你没先开口时才自动开场，且不强制从头
     if (mode === 'explanation' && !resumeHandle) {
       clearTimeout(kickoffTimer);
       kickoffTimer = setTimeout(() => {
         if (streaming && ws && ws.readyState === 1 && !userActive) {
-          ws.send(JSON.stringify({ type: 'text', text: '请带我精读我现在看到的这一页。' }));
+          ws.send(JSON.stringify({ type: 'text', text: '从这一页第一句开始，带我精读。' }));
         }
       }, 2500);
     }
@@ -785,7 +833,7 @@ async function startMedia() {
 }
 
 // ---------- 首次进门引导 ----------
-const OB_STEPS = 5;
+const OB_STEPS = 6;
 let obStep = 0;
 function obRenderDots() {
   const wrap = $('obDots');
@@ -826,6 +874,7 @@ function inviteStart() {
 }
 async function finishOnboarding(after) {
   localStorage.setItem('onboarded', '1');
+  saveReaderProfile(); // 存下画像页两题的选择
   $('onboarding').hidden = true;
   if (after === 'scan') {
     enterCapture(); // 直接进相机扫封面，拍完回书房主页
@@ -863,6 +912,24 @@ function obSetLangMode(mode) {
 $('obLang').querySelector('[data-lang="auto"]').onclick = () => obSetLangMode('auto');
 $('obLangPick').onclick = () => obSetLangMode('pick');
 $('obLangSelect').onchange = () => obSetLangMode('pick');
+// 画像页：卡点多选（切换 on），词表档单选（互斥）
+document.querySelectorAll('#obPain button').forEach((b) => (b.onclick = () => b.classList.toggle('on')));
+document.querySelectorAll('#obLevel button').forEach(
+  (b) =>
+    (b.onclick = () => {
+      document.querySelectorAll('#obLevel button').forEach((x) => x.classList.remove('on'));
+      b.classList.add('on');
+    }),
+);
+// 收集画像选择 → 本地缓存 + 推云端（seed）
+function saveReaderProfile() {
+  const painpoints = [...document.querySelectorAll('#obPain button.on')].map((b) => b.dataset.pain);
+  const levelBtn = document.querySelector('#obLevel button.on');
+  const level = levelBtn ? levelBtn.dataset.level : '';
+  readerProfile = { level, painpoints };
+  localStorage.setItem('readerProfile', JSON.stringify(readerProfile));
+  fetch('/profile', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ seed: readerProfile }) }).catch(() => {});
+}
 $('obBookScan').onclick = () => finishOnboarding('scan'); // 默认：去主界面扫封面识别
 $('obManualToggle').onclick = () => {
   $('obManual').hidden = false;
@@ -888,6 +955,7 @@ $('obBookSave').onclick = () => {
   } catch {}
 
   await pullBooks(); // 先把云端书库拉下来合并，再决定落点
+  await pullProfile(); // 拉读者画像（注入精读模式）
 
   const books = loadBooks();
   const cur = localStorage.getItem('currentBook');

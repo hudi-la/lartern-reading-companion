@@ -83,7 +83,7 @@
           <span>模式</span>
           <select id="modeSelect">
             <option value="companion">陪伴模式（只在你问时答）</option>
-            <option value="explanation">讲解模式（带你逐句精读）</option>
+            <option value="explanation">精读模式（带你逐句读）</option>
           </select>
         </label>
         <button class="ghost-btn" id="helpBtn"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>使用帮助</button>
@@ -102,7 +102,7 @@
           <li>把摄像头对准你正在读的书页。</li>
           <li>可以把手机架起来，让摄像头一直拍到你正在读的、摊开的书。</li>
           <li>随时开口提问——单词、句子、还是背景知识都行，就像一位真人老师正和你一起看这本书。</li>
-          <li><b>陪伴模式</b>：你自己安静读，只在开口问时才答，简短不打扰；<br /><b>讲解模式</b>：像精读老师带你把这一页逐句讲透。</li>
+          <li><b>陪伴模式</b>：你自己安静读，只在开口问时才答，简短不打扰；<br /><b>精读模式</b>：AI 起个头，带你一句句读——你来读、来说意思，它纠正、答疑。</li>
         </ol>
       </div>
     </div>
@@ -141,18 +141,38 @@
       </section>
 
       <section class="ob-step" data-step="3" hidden>
+        <h2 class="ob-title">帮我更懂怎么陪你读</h2>
+        <p class="ob-text">读英文书时，你最容易在哪儿卡住？（可多选）</p>
+        <div class="ob-choices ob-multi" id="obPain">
+          <button type="button" data-pain="生词">生词太多</button>
+          <button type="button" data-pain="长句">长句子绕不过来</button>
+          <button type="button" data-pain="文化">文化梗和典故</button>
+          <button type="button" data-pain="文体">方言、古旧、特殊文体</button>
+          <button type="button" data-pain="专业">专业词汇</button>
+        </div>
+        <p class="ob-text">从哪一行开始，一行里过半的词你需要查或猜？</p>
+        <div class="ob-choices ob-levels" id="obLevel">
+          <button type="button" data-level="A">decision、environment、familiar、significant</button>
+          <button type="button" data-level="B">suffocating、inevitable、deliberate、restless</button>
+          <button type="button" data-level="C">ostensibly、nuance、meticulous、ambivalent</button>
+          <button type="button" data-level="D">quixotic、sardonic、perfunctory、ineffable</button>
+        </div>
+        <button class="ob-primary" data-next>下一步</button>
+      </section>
+
+      <section class="ob-step" data-step="4" hidden>
         <h2 class="ob-title">怎么用</h2>
         <ul class="ob-howto">
           <li><span class="ob-emoji">📱</span><div><b>架起手机</b>更方便——找个支架或靠着东西立住，腾出手翻书。</div></li>
           <li><span class="ob-howto-orb"></span><div><b>点中间的球</b>唤醒，再点一下停下。</div></li>
           <li><span class="ob-emoji">🗣️</span><div><b>直接开口</b>提问，它说话时你也能随时插话打断。</div></li>
-          <li><span class="ob-emoji">🔄</span><div><b>两种模式</b>：陪伴（只在你问时答）/ 讲解（带你逐句精读）。</div></li>
+          <li><span class="ob-emoji">🔄</span><div><b>两种模式</b>：陪伴（只在你问时答）/ 精读（带你一句句读）。</div></li>
           <li><span class="ob-emoji">⏸</span><div><b>暂停</b>会关掉摄像头麦克风，省电省钱，恢复时接着聊。</div></li>
         </ul>
         <button class="ob-primary" data-next>下一步</button>
       </section>
 
-      <section class="ob-step" data-step="4" hidden>
+      <section class="ob-step" data-step="5" hidden>
         <div class="ob-glyph">📚</div>
         <h2 class="ob-title">最后，加一本书</h2>
         <p class="ob-text">对准书的封面拍一张，自动认出书名。<br />每本书会单独记住上下文。</p>

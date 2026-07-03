@@ -748,7 +748,8 @@ body {
   align-items: center;
   justify-content: center;
   padding: max(28px, env(safe-area-inset-top)) 26px max(28px, env(safe-area-inset-bottom));
-  overflow: hidden;
+  flex-direction: column;
+  overflow-y: auto;
 }
 .onboard[hidden] {
   display: none;
@@ -777,6 +778,7 @@ body {
 .ob-step {
   width: 100%;
   max-width: 360px;
+  margin: auto 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -894,6 +896,27 @@ body {
   color: #16171a;
   border-color: #fff;
   font-weight: 600;
+}
+/* 卡点：小 chips 换行 */
+.ob-multi {
+  flex-flow: row wrap;
+  justify-content: center;
+  max-width: 340px;
+}
+.ob-multi button {
+  flex: 0 0 auto;
+  padding: 9px 13px;
+  font-size: 14px;
+}
+/* 词表档：左对齐、字号小一点，长行可读 */
+.ob-levels {
+  max-width: 340px;
+}
+.ob-levels button {
+  text-align: left;
+  font-size: 13px;
+  letter-spacing: 0.2px;
+  padding: 12px 14px;
 }
 .ob-howto {
   list-style: none;

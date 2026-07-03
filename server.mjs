@@ -53,12 +53,14 @@ function parseCookies(req) {
   });
   return out;
 }
-// 仅「本机直连」（回环地址且未经反向代理）时，允许 ?as= 写入的 rc_as 覆盖用户名，用来在本地测新用户初次流程。
+// 「本机或局域网直连」（回环/私网地址且未经反向代理）时，允许 ?as= 写入的 rc_as 覆盖用户名，用来测新用户初次流程。
 // 线上跑在 Render 反代后面（会带 x-forwarded-*），一律不认，杜绝被绕过登录。
 function localDirect(req) {
-  const ip = (req.socket && req.socket.remoteAddress) || '';
-  const loopback = ip === '::1' || ip === '127.0.0.1' || ip === '::ffff:127.0.0.1';
-  return loopback && !req.headers['x-forwarded-for'] && !req.headers['x-forwarded-proto'];
+  const ip = ((req.socket && req.socket.remoteAddress) || '').replace(/^::ffff:/, '');
+  const loopback = ip === '::1' || ip === '127.0.0.1';
+  const privateLan =
+    /^10\./.test(ip) || /^192\.168\./.test(ip) || /^172\.(1[6-9]|2\d|3[01])\./.test(ip) || /^169\.254\./.test(ip);
+  return (loopback || privateLan) && !req.headers['x-forwarded-for'] && !req.headers['x-forwarded-proto'];
 }
 function devAs(req) {
   return localDirect(req) ? decodeURIComponent(parseCookies(req).rc_as || '') : '';
@@ -186,6 +188,42 @@ async function flushLibrary(name) {
 }
 loadLibrary();
 
+// ===== 读者画像（按用户存一份：onboarding 选的 seed + 隐式微调的 learned；存 Supabase，没配则本地文件）=====
+const profileByUser = new Map();
+const PROFILE_FILE = path.join(__dirname, 'data', 'profiles.json');
+function saveProfilesLocal() {
+  try {
+    fs.mkdirSync(path.dirname(PROFILE_FILE), { recursive: true });
+    fs.writeFileSync(PROFILE_FILE, JSON.stringify(Object.fromEntries(profileByUser)));
+  } catch {}
+}
+async function loadProfiles() {
+  if (supa) {
+    const { data, error } = await supa.from('reader_profile').select('*');
+    if (error) return console.error('Supabase 读取画像失败:', error.message);
+    for (const r of data || []) profileByUser.set(r.username, { seed: r.seed || {}, learned: r.learned || {} });
+    console.log(`读者画像已从 Supabase 载入：${profileByUser.size} 个用户`);
+  } else {
+    try {
+      if (fs.existsSync(PROFILE_FILE))
+        for (const [n, p] of Object.entries(JSON.parse(fs.readFileSync(PROFILE_FILE, 'utf8'))))
+          if (p && typeof p === 'object') profileByUser.set(n, { seed: p.seed || {}, learned: p.learned || {} });
+    } catch {}
+  }
+}
+async function flushProfile(name) {
+  const p = profileByUser.get(name) || { seed: {}, learned: {} };
+  if (supa) {
+    const { error } = await supa
+      .from('reader_profile')
+      .upsert({ username: name, seed: p.seed || {}, learned: p.learned || {}, updated_at: new Date().toISOString() }, { onConflict: 'username' });
+    if (error) console.error('Supabase 写入画像失败:', error.message);
+  } else {
+    saveProfilesLocal();
+  }
+}
+loadProfiles();
+
 let usageLogged = false;
 function extractBreakdown(meta) {
   const bd = emptyUsage();
@@ -308,6 +346,20 @@ app.put('/books', async (req, res) => {
   res.json({ ok: true, count: books.length });
 });
 
+// 读者画像：seed 由 onboarding 写；learned 预留给隐式微调，PUT 不动它
+app.get('/profile', (req, res) => {
+  const p = profileByUser.get(getUser(req)) || { seed: {}, learned: {} };
+  res.json({ ok: true, user: getUser(req), seed: p.seed || {}, learned: p.learned || {} });
+});
+app.put('/profile', async (req, res) => {
+  const user = getUser(req);
+  const seed = req.body?.seed && typeof req.body.seed === 'object' ? req.body.seed : {};
+  const prev = profileByUser.get(user) || { seed: {}, learned: {} };
+  profileByUser.set(user, { seed, learned: prev.learned || {} });
+  await flushProfile(user);
+  res.json({ ok: true });
+});
+
 // 用量看板数据
 app.get('/usage', (req, res) => {
   const withCost = (u) => {
@@ -388,6 +440,7 @@ wss.on('connection', (browser, req) => {
           model: MODEL,
           config: {
             responseModalities: [Modality.AUDIO],
+            mediaResolution: 'MEDIA_RESOLUTION_HIGH', // 显式钉高清晰度：读书要认清单词/指尖，别吃 Google 默认（会降到 LOW≈64token/帧）
             speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Zephyr' } } }, // 钉死默认嗓「Zephyr」（女声/明亮），防模型更新后被换掉
             systemInstruction: msg.system || '',
             sessionResumption: handle ? { handle } : {}, // 开启会话续传
