@@ -6,10 +6,12 @@ const ICON_PAUSE =
   '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/></svg>';
 const ICON_PLAY =
   '<svg class="ic" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v16l13-8z"/></svg>';
-// 回答语言：核心是英美英语学习者（第二语言为英语、阅读吃力）人群的母语 Top5 —— 西/中/阿/波兰/乌尔都，外加常见几种
+// 回答语言：按美/英国际学生来源国的母语排（印/中/韩为主；乌尔都=巴基斯坦，英国第4来源），外加常见几种。名单只是显式入口，选 Auto 也能跟随任意提问语言
 const REPLY_LANGS = [
   { v: 'zh', label: '中文 (Chinese)', name: '中文' },
   { v: 'en', label: 'English', name: 'English' },
+  { v: 'hi', label: 'हिन्दी (Hindi)', name: '印地语 (हिन्दी)' },
+  { v: 'ko', label: '한국어 (Korean)', name: '韩语 (한국어)' },
   { v: 'es', label: 'Español (Spanish)', name: '西班牙语 (Español)' },
   { v: 'ar', label: 'العربية (Arabic)', name: '阿拉伯语 (العربية)' },
   { v: 'pl', label: 'Polski (Polish)', name: '波兰语 (Polski)' },
