@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>阅读陪伴 · 登录</title>
+    <title>Reading Companion · Log in</title>
     <style>
       * { box-sizing: border-box; }
       body {
@@ -31,10 +31,10 @@
   </head>
   <body>
     <div class="card">
-      <h1>📖 阅读陪伴</h1>
-      <p>请输入你的邀请码</p>
-      <input id="pw" type="password" placeholder="邀请码" autofocus />
-      <button id="go">进入</button>
+      <h1>📖 Reading Companion</h1>
+      <p>Enter your invite code</p>
+      <input id="pw" type="password" placeholder="Invite code" autofocus />
+      <button id="go">Enter</button>
       <div class="err" id="err"></div>
     </div>
     <script>
@@ -42,7 +42,7 @@
         const pw = document.getElementById('pw').value;
         const r = await fetch('/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: pw }) });
         if (r.ok) location.href = '/';
-        else document.getElementById('err').textContent = '密码不对';
+        else document.getElementById('err').textContent = 'Wrong code';
       }
       document.getElementById('go').onclick = login;
       document.getElementById('pw').addEventListener('keydown', (e) => { if (e.key === 'Enter') login(); });

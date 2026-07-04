@@ -8,16 +8,16 @@ const ICON_PLAY =
   '<svg class="ic" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v16l13-8z"/></svg>';
 // 回答语言：核心是英美英语学习者（第二语言为英语、阅读吃力）人群的母语 Top5 —— 西/中/阿/波兰/乌尔都，外加常见几种
 const REPLY_LANGS = [
-  { v: 'zh', label: '中文', name: '中文' },
+  { v: 'zh', label: '中文 (Chinese)', name: '中文' },
   { v: 'en', label: 'English', name: 'English' },
-  { v: 'es', label: 'Español（西班牙语）', name: '西班牙语 (Español)' },
-  { v: 'ar', label: 'العربية（阿拉伯语）', name: '阿拉伯语 (العربية)' },
-  { v: 'pl', label: 'Polski（波兰语）', name: '波兰语 (Polski)' },
-  { v: 'ur', label: 'اردو（乌尔都语）', name: '乌尔都语 (اردو)' },
-  { v: 'vi', label: 'Tiếng Việt（越南语）', name: '越南语 (Tiếng Việt)' },
-  { v: 'bn', label: 'বাংলা（孟加拉语）', name: '孟加拉语 (বাংলা)' },
-  { v: 'fr', label: 'Français（法语）', name: '法语 (Français)' },
-  { v: 'pt', label: 'Português（葡萄牙语）', name: '葡萄牙语 (Português)' },
+  { v: 'es', label: 'Español (Spanish)', name: '西班牙语 (Español)' },
+  { v: 'ar', label: 'العربية (Arabic)', name: '阿拉伯语 (العربية)' },
+  { v: 'pl', label: 'Polski (Polish)', name: '波兰语 (Polski)' },
+  { v: 'ur', label: 'اردو (Urdu)', name: '乌尔都语 (اردو)' },
+  { v: 'vi', label: 'Tiếng Việt (Vietnamese)', name: '越南语 (Tiếng Việt)' },
+  { v: 'bn', label: 'বাংলা (Bengali)', name: '孟加拉语 (বাংলা)' },
+  { v: 'fr', label: 'Français (French)', name: '法语 (Français)' },
+  { v: 'pt', label: 'Português (Portuguese)', name: '葡萄牙语 (Português)' },
 ];
 const LANG_NAME = Object.fromEntries(REPLY_LANGS.map((l) => [l.v, l.name]));
 const video = $('video');
@@ -71,7 +71,7 @@ function caption(t) {
 function setState(s) {
   state = s;
   orb.className = 'orb ' + s;
-  const labels = { stopped: '点一下唤醒', live: '已连接', listening: '在听…', thinking: '在想…', speaking: '在讲…（说话可打断）' };
+  const labels = { stopped: 'Tap to wake', live: 'Connected', listening: 'Listening…', thinking: 'Thinking…', speaking: 'Speaking… (interrupt anytime)' };
   setStatus(labels[s] || '');
 }
 
@@ -139,7 +139,7 @@ async function pullProfile() {
   } catch {}
 }
 function setBookTitle() {
-  $('bookTitle').textContent = currentBook ? currentBook.title : '未选择书';
+  $('bookTitle').textContent = currentBook ? currentBook.title : 'No book selected';
 }
 // ---------- 程序化封面 ----------
 // 标题+作者 → 稳定 hash → 查“配色 / 纹理 / 排版”表。同一本书永远同一张封面，
@@ -188,7 +188,7 @@ function titleLenClass(title) {
 function buildCover(card, b) {
   const seed = hashStr((b.title || '') + (b.author || ''));
   const type = TYPE_META[b.type] || TYPE_META.book;
-  const title = b.title || '未命名';
+  const title = b.title || 'Untitled';
   const badge = `<span class="cv-badge">${type.icon} ${type.label}</span>`;
   const titleEl = `<div class="cv-title ${titleLenClass(title)}">${esc(title)}</div>`;
   const authorEl = b.author ? `<div class="cv-author">${esc(b.author)}</div>` : '';
@@ -224,7 +224,7 @@ function renderLibrary() {
   });
   const add = document.createElement('div');
   add.className = 'book-card add';
-  add.innerHTML = '<div class="plus">＋</div><div>添加新书</div>';
+  add.innerHTML = '<div class="plus">＋</div><div>Add book</div>';
   add.onclick = () => enterCapture();
   grid.appendChild(add);
 }
@@ -314,10 +314,10 @@ async function startCamera() {
     video.srcObject = camStream;
     await video.play().catch(() => {});
     await listCameras();
-    log('摄像头已开：' + (camStream.getVideoTracks()[0]?.label || '未知'));
+    log('Camera on: ' + (camStream.getVideoTracks()[0]?.label || 'unknown'));
   } catch (e) {
-    log('摄像头错误：' + e.name + ' ' + e.message);
-    setStatus('摄像头打开失败：' + e.name);
+    log('Camera error: ' + e.name + ' ' + e.message);
+    setStatus('Camera failed to open: ' + e.name);
   }
 }
 // 翻转前/后摄像头
@@ -336,7 +336,7 @@ async function listCameras() {
   cams.forEach((c, i) => {
     const o = document.createElement('option');
     o.value = c.deviceId;
-    o.textContent = c.label || `摄像头 ${i + 1}`;
+    o.textContent = c.label || `Camera ${i + 1}`;
     sel.appendChild(o);
   });
   if (prev && cams.some((c) => c.deviceId === prev)) sel.value = prev;
@@ -398,21 +398,21 @@ function pauseMedia() {
   micStream = null;
   paused = true;
   $('pauseBtn').innerHTML = ICON_PLAY;
-  $('pauseBtn').title = '恢复摄像头和收音';
+  $('pauseBtn').title = 'Resume camera & mic';
   $('pausedVeil').hidden = false;
-  log('已暂停：摄像头与麦克风已关');
+  log('Paused: camera and mic off');
 }
 async function resumeMedia() {
   $('pausedVeil').hidden = true;
   $('pauseBtn').innerHTML = ICON_PAUSE;
-  $('pauseBtn').title = '暂停摄像头和收音';
+  $('pauseBtn').title = 'Pause camera & mic';
   paused = false;
   try {
     await startCamera();
     await attachMic();
-    log('已恢复：摄像头与麦克风开启');
+    log('Resumed: camera and mic on');
   } catch (e) {
-    log('恢复失败：' + e.message);
+    log('Resume failed: ' + e.message);
   }
 }
 function togglePause() {
@@ -424,7 +424,7 @@ function openCoverScan() {
   if (paused) resumeMedia();
   $('orbWrap').hidden = true;
   resetCaptureManual();
-  $('capText').textContent = '把书的封面对准画面，点下方拍摄';
+  $('capText').textContent = 'Aim the book cover at the frame, then tap below';
   $('captureBar').hidden = false;
 }
 function exitCoverScan() {
@@ -444,33 +444,33 @@ function openCaptureManual() {
   $('capManual').hidden = false;
   $('captureBtn').hidden = true;
   $('capManualToggle').hidden = true;
-  $('capText').textContent = '手动填写书名（作者可留空）';
+  $('capText').textContent = 'Enter the title manually (author optional)';
   $('capBookTitle').focus();
 }
 // 手动保存：留空则等于建一本空书
 function addBookManual() {
-  saveNewBook({ title: $('capBookTitle').value.trim() || '未命名的书', author: $('capBookAuthor').value.trim() });
+  saveNewBook({ title: $('capBookTitle').value.trim() || 'Untitled book', author: $('capBookAuthor').value.trim() });
 }
 async function captureCover() {
   const img = captureFrameBase64(1024);
   if (!img) {
-    $('capText').textContent = '摄像头还没准备好';
+    $('capText').textContent = 'Camera not ready yet';
     return;
   }
   $('captureBtn').disabled = true;
-  $('capText').textContent = '正在识别封面…';
+  $('capText').textContent = 'Scanning cover…';
   try {
     const res = await (
       await fetch('/identify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: img }) })
     ).json();
     $('captureBtn').disabled = false;
     if (!res.ok || !res.data || !res.data.title) {
-      $('capText').textContent = '没认出书名，换个角度重拍，或点下方手动填写';
+      $('capText').textContent = 'Couldn\'t read the title — try another angle, or enter it manually below';
       return;
     }
     saveNewBook(res.data);
   } catch (e) {
-    $('capText').textContent = '识别失败：' + e.message + '，可重拍或手动填写';
+    $('capText').textContent = 'Scan failed: ' + e.message + ' — retake or enter manually';
   }
 }
 function bgText(d) {
@@ -496,7 +496,7 @@ function saveNewBook(d) {
     localStorage.setItem('currentBook', existing.id);
     resumeHandle = null;
     setBookTitle();
-    goHome(`书房里已有《${existing.title}》 · 点开它继续读`);
+    goHome(`Already in your library: “${existing.title}” · tap to continue`);
     return;
   }
   const books = loadBooks();
@@ -507,7 +507,7 @@ function saveNewBook(d) {
   localStorage.setItem('currentBook', book.id);
   resumeHandle = null;
   setBookTitle();
-  goHome(`已加入书房：《${book.title}》 · 点开它开始读`);
+  goHome(`Added to your library: “${book.title}” · tap to start`);
 }
 function downsampleTo16k(float32, inRate) {
   if (inRate === 16000) return float32;
@@ -598,7 +598,7 @@ function stopPlayback() {
 function startAutoStop() {
   clearAutoStop();
   autoStopTimer = setTimeout(() => {
-    if (streaming && !userActive) stopStream('讲完 5 秒无回应，自动停流');
+    if (streaming && !userActive) stopStream('Auto-stopped: 5s of silence after speaking');
   }, 5000);
 }
 function clearAutoStop() {
@@ -610,7 +610,7 @@ function clearAutoStop() {
 async function wake() {
   if (streaming) return;
   if (!currentBook) {
-    setStatus('请先回书房选一本书');
+    setStatus('Go back and pick a book first');
     return;
   }
   ensureOutCtx();
@@ -661,23 +661,23 @@ async function wake() {
     } else if (m.type === 'resumeHandle') {
       resumeHandle = m.handle; // 存住，重连/恢复时带回去
     } else if (m.type === 'goAway') {
-      log('会话将到时(' + (m.timeLeft || '') + ')，续传重连…');
+      log('Session nearing limit (' + (m.timeLeft || '') + '), resuming…');
       reconnectGemini(); // 2 分钟上限前主动续传重连，体验上无缝
     } else if (m.type === 'staleHandle') {
       resumeHandle = null;
-      log('续传句柄过期，已新开会话');
+      log('Resume handle expired; started a new session');
     } else if (m.type === 'error') {
-      log('错误：' + m.error);
-      setStatus('出错：' + m.error);
+      log('Error: ' + m.error);
+      setStatus('Error: ' + m.error);
     } else if (m.type === 'closed') {
-      log('会话关闭：' + (m.reason || ''));
+      log('Session closed: ' + (m.reason || ''));
       if (streaming && !reconnecting && resumeHandle && Date.now() - lastReconnect > 3000) reconnectGemini();
     }
   };
   ws.onclose = () => {
     if (streaming) stopStream();
   };
-  ws.onerror = () => log('WebSocket 错误');
+  ws.onerror = () => log('WebSocket error');
 }
 
 function reconnectGemini() {
@@ -715,7 +715,7 @@ function stopStream(reason) {
 
 // 点呼吸球：停流时=唤醒开流；运行中=手动停流（打断靠直接说话）
 function onOrbTap() {
-  if (streaming) stopStream('已手动停流');
+  if (streaming) stopStream('Stopped manually');
   else wake();
 }
 
@@ -744,7 +744,7 @@ function goHome(hint) {
   $('readingScreen').hidden = true;
   $('libraryHome').hidden = false;
   renderLibrary();
-  $('homeHint').innerHTML = '<span class="dot-off"></span>' + (hint || '相机已关闭 · 选一本书开始');
+  $('homeHint').innerHTML = '<span class="dot-off"></span>' + (hint || 'Camera off · Pick a book to start');
 }
 async function enterBook(b) {
   currentBook = b;
@@ -759,8 +759,8 @@ async function enterBook(b) {
   try {
     await startMedia();
   } catch (e) {
-    log('媒体启动失败：' + e.message);
-    setStatus('需要摄像头/麦克风权限');
+    log('Media failed to start: ' + e.message);
+    setStatus('Camera/mic permission needed');
   }
   setState('stopped');
   inviteStart();
@@ -773,7 +773,7 @@ async function enterCapture() {
   try {
     if (!camStream) await startCamera();
   } catch (e) {
-    log('相机启动失败：' + e.message);
+    log('Camera failed to start: ' + e.message);
   }
   openCoverScan();
 }
@@ -810,7 +810,7 @@ $('capBookSave').onclick = addBookManual;
 $('captureCancel').onclick = () => goHome();
 function buildLangSelects() {
   $('replyLang').innerHTML =
-    '<option value="auto">自动（跟随我提问的语言）</option>' + REPLY_LANGS.map((l) => `<option value="${l.v}">${l.label}</option>`).join('');
+    '<option value="auto">Auto (match the language I ask in)</option>' + REPLY_LANGS.map((l) => `<option value="${l.v}">${l.label}</option>`).join('');
   $('obLangSelect').innerHTML = REPLY_LANGS.map((l) => `<option value="${l.v}">${l.label}</option>`).join('');
   const cur = localStorage.getItem('replyLang') || 'auto';
   $('replyLang').value = cur;
@@ -858,7 +858,7 @@ function startOnboarding() {
 }
 function obCreateBook(title, author) {
   const books = loadBooks();
-  const book = { id: 'b' + Date.now(), title: title.trim() || '未命名的书', author: (author || '').trim(), background: '' };
+  const book = { id: 'b' + Date.now(), title: title.trim() || 'Untitled book', author: (author || '').trim(), background: '' };
   books.unshift(book);
   saveBooks(books);
   currentBook = book;
@@ -869,8 +869,8 @@ function obCreateBook(title, author) {
 }
 // 加书成功后，邀请用户点呼吸球开始
 function inviteStart() {
-  setStatus('点一下，开始陪你读');
-  if (currentBook) caption(`准备好了，点中间的球，开始陪你读《${currentBook.title}》。`);
+  setStatus('Tap to start reading together');
+  if (currentBook) caption(`Ready — tap the center orb to start reading “${currentBook.title}”.`);
 }
 async function finishOnboarding(after) {
   localStorage.setItem('onboarded', '1');
@@ -889,16 +889,16 @@ $('obPermBtn').onclick = async () => {
   const btn = $('obPermBtn');
   $('obPermHint').textContent = '';
   btn.disabled = true;
-  btn.textContent = '请求中…';
+  btn.textContent = 'Requesting…';
   try {
     await startMedia();
     if (!camStream || !micStream) throw new Error('denied');
     obNext();
   } catch {
-    $('obPermHint').textContent = '没拿到权限，请在浏览器里点「允许」后再试';
+    $('obPermHint').textContent = 'Permission denied — tap “Allow” in your browser and try again';
   } finally {
     btn.disabled = false;
-    btn.textContent = '允许访问';
+    btn.textContent = 'Allow access';
   }
 };
 // 语言选择：'auto'（跟随提问）或 'pick'（用下拉指定的语言）
@@ -948,9 +948,9 @@ $('obBookSave').onclick = () => {
     const st = await (await fetch('/status')).json();
     if (st.ready) {
       $('liveDot').classList.add('ok');
-      $('liveDot').title = '模型就绪：' + st.model;
+      $('liveDot').title = 'Model ready: ' + st.model;
     } else {
-      $('liveDot').title = '未设置 GEMINI_API_KEY';
+      $('liveDot').title = 'GEMINI_API_KEY not set';
     }
   } catch {}
 

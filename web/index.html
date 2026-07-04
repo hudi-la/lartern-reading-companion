@@ -1,20 +1,20 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <title>阅读陪伴</title>
+    <title>Reading Companion</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
     <!-- 书房主页：默认落点，相机关闭 -->
     <div class="home" id="libraryHome" hidden>
       <div class="home-top">
-        <h1 class="home-title">书房</h1>
-        <button id="homeSettings" class="icon-btn" title="设置"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg></button>
+        <h1 class="home-title">Library</h1>
+        <button id="homeSettings" class="icon-btn" title="Settings"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg></button>
       </div>
-      <div class="home-hint" id="homeHint"><span class="dot-off"></span>相机已关闭 · 选一本书开始</div>
+      <div class="home-hint" id="homeHint"><span class="dot-off"></span>Camera off · Pick a book to start</div>
       <div class="book-grid" id="homeGrid"></div>
     </div>
 
@@ -25,42 +25,42 @@
 
       <!-- 顶部栏 -->
       <div class="top-bar" id="topBar">
-        <button id="backBtn" class="icon-btn" title="返回书房"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg></button>
-        <span class="book-name" id="bookTitle">未选择书</span>
-        <button id="readSettings" class="icon-btn" title="设置"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg></button>
-        <span id="liveDot" class="status-dot" title="检查中…"></span>
+        <button id="backBtn" class="icon-btn" title="Back to library"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg></button>
+        <span class="book-name" id="bookTitle">No book selected</span>
+        <button id="readSettings" class="icon-btn" title="Settings"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg></button>
+        <span id="liveDot" class="status-dot" title="Checking…"></span>
       </div>
 
       <!-- 语音交互中心 -->
       <div class="orb-wrap" id="orbWrap">
         <div class="caption" id="caption"></div>
         <div class="orb-row">
-          <button id="pauseBtn" class="side-btn" title="暂停摄像头和收音"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/></svg></button>
+          <button id="pauseBtn" class="side-btn" title="Pause camera & mic"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/></svg></button>
           <div class="orb stopped" id="orb"></div>
-          <button id="flipBtn" class="side-btn" title="翻转摄像头"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 19H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5"/><path d="M13 5h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-5"/><circle cx="12" cy="12" r="3"/><path d="m18 22-3-3 3-3"/><path d="m6 2 3 3-3 3"/></svg></button>
+          <button id="flipBtn" class="side-btn" title="Flip camera"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 19H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5"/><path d="M13 5h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-5"/><circle cx="12" cy="12" r="3"/><path d="m18 22-3-3 3-3"/><path d="m6 2 3 3-3 3"/></svg></button>
         </div>
-        <div class="orb-label" id="statusText">点一下唤醒</div>
+        <div class="orb-label" id="statusText">Tap to wake</div>
       </div>
 
       <!-- 添加新书：拍封面识别 -->
       <div class="capture-bar" id="captureBar" hidden>
         <div class="cap-frame"></div>
-        <div class="cap-text" id="capText">把书的封面对准画面，点下方拍摄</div>
+        <div class="cap-text" id="capText">Aim the book cover at the frame, then tap below</div>
         <div class="cap-manual" id="capManual" hidden>
-          <input id="capBookTitle" class="ob-input" placeholder="书名" />
-          <input id="capBookAuthor" class="ob-input" placeholder="作者（可选）" />
-          <button id="capBookSave" class="cap-btn">保存，加入书房</button>
+          <input id="capBookTitle" class="ob-input" placeholder="Title" />
+          <input id="capBookAuthor" class="ob-input" placeholder="Author (optional)" />
+          <button id="capBookSave" class="cap-btn">Save to library</button>
         </div>
-        <button id="captureBtn" class="cap-btn"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>拍摄封面</button>
-        <button id="capManualToggle" class="cap-skip">识别不出？手动填写书名</button>
-        <button id="captureCancel" class="cap-cancel">取消</button>
+        <button id="captureBtn" class="cap-btn"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>Capture cover</button>
+        <button id="capManualToggle" class="cap-skip">Can't scan? Enter title manually</button>
+        <button id="captureCancel" class="cap-cancel">Cancel</button>
       </div>
 
       <!-- 暂停：冻结当前画面 + 压暗，正中放蓝色恢复键；顶栏仍可见 -->
       <div class="paused-veil" id="pausedVeil" hidden>
         <img id="pausedShot" class="paused-shot" alt="" />
         <button id="resumeBtn" class="resume-big"><svg class="ic" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v16l13-8z"/></svg></button>
-        <div class="resume-label">已暂停 · 点击恢复</div>
+        <div class="resume-label">Paused · tap to resume</div>
       </div>
     </div>
 
@@ -68,41 +68,41 @@
     <div class="overlay" id="settingsPanel" hidden>
       <div class="card">
         <div class="card-head">
-          <strong><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>设置</strong>
+          <strong><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>Settings</strong>
           <button class="icon-btn dark" data-close="settingsPanel"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
         </div>
         <label class="field">
-          <span>回答语言</span>
+          <span>Reply language</span>
           <select id="replyLang">
-            <option value="auto">自动（跟随我提问的语言）</option>
-            <option value="zh">中文为主</option>
+            <option value="auto">Auto (match the language I ask in)</option>
+            <option value="zh">Chinese</option>
             <option value="en">English</option>
           </select>
         </label>
         <label class="field">
-          <span>模式</span>
+          <span>Mode</span>
           <select id="modeSelect">
-            <option value="companion">陪伴模式（只在你问时答）</option>
-            <option value="explanation">精读模式（带你逐句读）</option>
+            <option value="companion">Companion (answers only when you ask)</option>
+            <option value="explanation">Close reading (guides you line by line)</option>
           </select>
         </label>
-        <button class="ghost-btn" id="helpBtn"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>使用帮助</button>
+        <button class="ghost-btn" id="helpBtn"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>How to use</button>
         <div class="log" id="log" hidden></div>
       </div>
     </div>
 
-    <!-- 使用帮助 -->
+    <!-- How to use -->
     <div class="overlay" id="helpPanel" hidden>
       <div class="card">
         <div class="card-head">
-          <strong><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>使用帮助</strong>
+          <strong><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>How to use</strong>
           <button class="icon-btn dark" data-close="helpPanel"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
         </div>
         <ol class="help-list">
-          <li>把摄像头对准你正在读的书页。</li>
-          <li>可以把手机架起来，让摄像头一直拍到你正在读的、摊开的书。</li>
-          <li>随时开口提问——单词、句子、还是背景知识都行，就像一位真人老师正和你一起看这本书。</li>
-          <li><b>陪伴模式</b>：你自己安静读，只在开口问时才答，简短不打扰；<br /><b>精读模式</b>：AI 起个头，带你一句句读——你来读、来说意思，它纠正、答疑。</li>
+          <li>Point the camera at the page you're reading.</li>
+          <li>Prop your phone up so the camera keeps the open book in view.</li>
+          <li>Ask out loud anytime — a word, a sentence, or background — like a real teacher reading alongside you.</li>
+          <li><b>Companion</b>: you read quietly; it answers only when you ask, briefly.<br /><b>Close reading</b>: it takes the lead and walks you sentence by sentence — you read and paraphrase, it corrects and clarifies.</li>
         </ol>
       </div>
     </div>
@@ -113,75 +113,75 @@
 
       <section class="ob-step" data-step="0">
         <div class="ob-orb"></div>
-        <h1 class="ob-title">阅读陪伴</h1>
-        <p class="ob-text">举起手机，对着纸质书的一页。<br />像有位英语精读老师坐在你身边，随问随答、随手讲解。</p>
-        <button class="ob-primary" data-next>开始</button>
+        <h1 class="ob-title">Reading Companion</h1>
+        <p class="ob-text">Hold your phone up to a page of a printed book.<br />Like an English close-reading tutor beside you — answering and explaining as you go.</p>
+        <button class="ob-primary" data-next>Get started</button>
       </section>
 
       <section class="ob-step" data-step="1" hidden>
         <div class="ob-glyph">📷<span>🎙️</span></div>
-        <h2 class="ob-title">需要摄像头和麦克风</h2>
-        <p class="ob-text">用来看你的书页、听你提问。<br />只在唤醒后开启，画面和声音都不保存。</p>
-        <button class="ob-primary" id="obPermBtn">允许访问</button>
+        <h2 class="ob-title">Camera &amp; microphone needed</h2>
+        <p class="ob-text">To see your page and hear your questions.<br />On only after you wake it; nothing is recorded.</p>
+        <button class="ob-primary" id="obPermBtn">Allow access</button>
         <div class="ob-hint" id="obPermHint"></div>
       </section>
 
       <section class="ob-step" data-step="2" hidden>
         <div class="ob-glyph">🌐</div>
-        <h2 class="ob-title">希望我用哪种语言回答？</h2>
-        <p class="ob-text">随时能在设置里改。</p>
+        <h2 class="ob-title">Which language should I answer in?</h2>
+        <p class="ob-text">You can change this anytime in Settings.</p>
         <div class="ob-choices" id="obLang">
-          <button type="button" data-lang="auto" class="on">跟随我提问的语言</button>
+          <button type="button" data-lang="auto" class="on">Match the language I ask in</button>
           <div class="ob-langpick" id="obLangPick">
-            <span>指定语言</span>
+            <span>Pick a language</span>
             <select id="obLangSelect"></select>
           </div>
         </div>
-        <button class="ob-primary" data-next>下一步</button>
+        <button class="ob-primary" data-next>Next</button>
       </section>
 
       <section class="ob-step" data-step="3" hidden>
-        <h2 class="ob-title">帮我更懂怎么陪你读</h2>
-        <p class="ob-text">读英文书时，你最容易在哪儿卡住？（可多选）</p>
+        <h2 class="ob-title">Help me read with you better</h2>
+        <p class="ob-text">When reading in English, where do you get stuck most? (choose any)</p>
         <div class="ob-choices ob-multi" id="obPain">
-          <button type="button" data-pain="生词">生词太多</button>
-          <button type="button" data-pain="长句">长句子绕不过来</button>
-          <button type="button" data-pain="文化">文化梗和典故</button>
-          <button type="button" data-pain="文体">方言、古旧、特殊文体</button>
-          <button type="button" data-pain="专业">专业词汇</button>
+          <button type="button" data-pain="生词">Too many unfamiliar words</button>
+          <button type="button" data-pain="长句">Long sentences I can't untangle</button>
+          <button type="button" data-pain="文化">Cultural references and allusions</button>
+          <button type="button" data-pain="文体">Dialect, archaic, or unusual style</button>
+          <button type="button" data-pain="专业">Technical vocabulary</button>
         </div>
-        <p class="ob-text">从哪一行开始，一行里过半的词你需要查或猜？</p>
+        <p class="ob-text">From which row do more than half the words need looking up or guessing?</p>
         <div class="ob-choices ob-levels" id="obLevel">
           <button type="button" data-level="A">decision、environment、familiar、significant</button>
           <button type="button" data-level="B">suffocating、inevitable、deliberate、restless</button>
           <button type="button" data-level="C">ostensibly、nuance、meticulous、ambivalent</button>
           <button type="button" data-level="D">quixotic、sardonic、perfunctory、ineffable</button>
         </div>
-        <button class="ob-primary" data-next>下一步</button>
+        <button class="ob-primary" data-next>Next</button>
       </section>
 
       <section class="ob-step" data-step="4" hidden>
-        <h2 class="ob-title">怎么用</h2>
+        <h2 class="ob-title">How to use</h2>
         <ul class="ob-howto">
-          <li><span class="ob-emoji">📱</span><div><b>架起手机</b>更方便——找个支架或靠着东西立住，腾出手翻书。</div></li>
-          <li><span class="ob-howto-orb"></span><div><b>点中间的球</b>唤醒，再点一下停下。</div></li>
-          <li><span class="ob-emoji">🗣️</span><div><b>直接开口</b>提问，它说话时你也能随时插话打断。</div></li>
-          <li><span class="ob-emoji">🔄</span><div><b>两种模式</b>：陪伴（只在你问时答）/ 精读（带你一句句读）。</div></li>
-          <li><span class="ob-emoji">⏸</span><div><b>暂停</b>会关掉摄像头麦克风，省电省钱，恢复时接着聊。</div></li>
+          <li><span class="ob-emoji">📱</span><div><b>Prop your phone up</b> — use a stand or lean it on something, so your hands are free to turn pages.</div></li>
+          <li><span class="ob-howto-orb"></span><div><b>Tap the center orb</b> to wake it; tap again to stop.</div></li>
+          <li><span class="ob-emoji">🗣️</span><div><b>Just speak</b> to ask; you can interrupt it anytime while it's talking.</div></li>
+          <li><span class="ob-emoji">🔄</span><div><b>Two modes</b>: Companion (answers only when you ask) / Close reading (guides you line by line).</div></li>
+          <li><span class="ob-emoji">⏸</span><div><b>Pause</b> turns off the camera and mic to save power and cost; resume right where you left off.</div></li>
         </ul>
-        <button class="ob-primary" data-next>下一步</button>
+        <button class="ob-primary" data-next>Next</button>
       </section>
 
       <section class="ob-step" data-step="5" hidden>
         <div class="ob-glyph">📚</div>
-        <h2 class="ob-title">最后，加一本书</h2>
-        <p class="ob-text">对准书的封面拍一张，自动认出书名。<br />每本书会单独记住上下文。</p>
-        <button class="ob-primary" id="obBookScan">📷 扫封面识别</button>
-        <button class="ob-ghost" id="obManualToggle">改用手动填写</button>
+        <h2 class="ob-title">Finally, add a book</h2>
+        <p class="ob-text">Snap the book cover to auto-detect the title.<br />Each book keeps its own context.</p>
+        <button class="ob-primary" id="obBookScan">📷 Scan cover</button>
+        <button class="ob-ghost" id="obManualToggle">Enter manually instead</button>
         <div class="ob-manual" id="obManual" hidden>
-          <input id="obBookTitle" class="ob-input" placeholder="书名" />
-          <input id="obBookAuthor" class="ob-input" placeholder="作者（可选）" />
-          <button class="ob-primary" id="obBookSave">保存，开始阅读</button>
+          <input id="obBookTitle" class="ob-input" placeholder="Title" />
+          <input id="obBookAuthor" class="ob-input" placeholder="Author (optional)" />
+          <button class="ob-primary" id="obBookSave">Save and start reading</button>
         </div>
       </section>
     </div>
