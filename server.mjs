@@ -8,7 +8,7 @@ import { fileURLToPath } from 'url';
 import crypto from 'crypto';
 import express from 'express';
 import { WebSocketServer } from 'ws';
-import { GoogleGenAI, Modality } from '@google/genai';
+import { GoogleGenAI, Modality, Type } from '@google/genai';
 import { createClient } from '@supabase/supabase-js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -224,6 +224,68 @@ async function flushProfile(name) {
 }
 loadProfiles();
 
+// ===== 每本书的感想 + 进度（按用户存一个 {bookId:{reflections,progress}} blob；存 Supabase，没配则本地文件）=====
+const memoryByUser = new Map();
+const MEMORY_FILE = path.join(__dirname, 'data', 'book_memory.json');
+function saveMemoryLocal() {
+  try {
+    fs.mkdirSync(path.dirname(MEMORY_FILE), { recursive: true });
+    fs.writeFileSync(MEMORY_FILE, JSON.stringify(Object.fromEntries(memoryByUser)));
+  } catch {}
+}
+async function loadMemory() {
+  if (supa) {
+    const { data, error } = await supa.from('book_memory').select('*');
+    if (error) return console.error('Supabase 读取书记忆失败:', error.message);
+    for (const r of data || []) memoryByUser.set(r.username, r.data || {});
+    console.log(`书记忆已从 Supabase 载入：${memoryByUser.size} 个用户`);
+  } else {
+    try {
+      if (fs.existsSync(MEMORY_FILE))
+        for (const [n, d] of Object.entries(JSON.parse(fs.readFileSync(MEMORY_FILE, 'utf8')))) memoryByUser.set(n, d || {});
+    } catch {}
+  }
+}
+async function flushMemory(name) {
+  const data = memoryByUser.get(name) || {};
+  if (supa) {
+    const { error } = await supa.from('book_memory').upsert({ username: name, data, updated_at: new Date().toISOString() }, { onConflict: 'username' });
+    if (error) console.error('Supabase 写入书记忆失败:', error.message);
+  } else {
+    saveMemoryLocal();
+  }
+}
+function bookMem(name, bookId) {
+  if (!memoryByUser.has(name)) memoryByUser.set(name, {});
+  const all = memoryByUser.get(name);
+  if (!all[bookId]) all[bookId] = { reflections: [], progress: '' };
+  return all[bookId];
+}
+loadMemory();
+
+// 会话结束时把这一程的转写总结进书的「滚动进度」；太短就跳过，省一次 flash 调用
+async function summarizeProgress(name, bookId, transcript) {
+  if (!KEY || !bookId || !transcript.length) return;
+  const text = transcript.map((t) => (t.role === 'in' ? '读者' : 'AI') + '：' + t.text).join('\n').trim();
+  if (text.length < 80) return; // 太短，没啥可记
+  const mem = bookMem(name, bookId);
+  const prompt =
+    '下面是读者精读一本英文书时、这一小段的语音转写。请用两三句中文更新「阅读进度」：读到书里哪儿、讲/聊了什么、读者卡住或特别在意的点；抓要点、别逐句复述。\n\n' +
+    '已有进度：' + (mem.progress || '（还没有）') + '\n\n这一段转写：\n' + text + '\n\n只输出更新后的进度摘要本身。';
+  try {
+    const ai = new GoogleGenAI({ apiKey: KEY });
+    const r = await ai.models.generateContent({ model: VISION_MODEL, contents: [{ role: 'user', parts: [{ text: prompt }] }] });
+    const summary = (r.text || '').trim();
+    if (summary) {
+      mem.progress = summary;
+      await flushMemory(name);
+      console.log(`[进度·${bookId}] ${summary}`);
+    }
+  } catch (e) {
+    console.error('进度总结失败:', e?.message || e);
+  }
+}
+
 let usageLogged = false;
 function extractBreakdown(meta) {
   const bd = emptyUsage();
@@ -360,6 +422,14 @@ app.put('/profile', async (req, res) => {
   res.json({ ok: true });
 });
 
+// 每本书的感想 + 进度：进书时拉进度注入 systemInstruction；感想列表供回看
+app.get('/memory', (req, res) => {
+  const all = memoryByUser.get(getUser(req)) || {};
+  const book = req.query.book;
+  if (book) return res.json({ ok: true, ...(all[book] || { reflections: [], progress: '' }) });
+  res.json({ ok: true, books: all });
+});
+
 // 用量看板数据
 app.get('/usage', (req, res) => {
   const withCost = (u) => {
@@ -410,7 +480,7 @@ const wss = new WebSocketServer({ server, path: '/live', verifyClient: (info, cb
 wss.on('connection', (browser, req) => {
   let session = null;
   const user = getUser(req); // 这条连接属于哪个测试用户，用量都记到他名下
-  const cstate = { last: emptyUsage(), streamStart: 0 };
+  const cstate = { last: emptyUsage(), streamStart: 0, transcript: [], bookId: '' };
   const send = (obj) => browser.readyState === 1 && browser.send(JSON.stringify(obj));
 
   browser.on('message', async (raw) => {
@@ -434,6 +504,8 @@ wss.on('connection', (browser, req) => {
       cstate.streamStart = Date.now();
       getUsage(user).sessions += 1;
       dirtyUsers.add(user);
+      cstate.bookId = msg.bookId || cstate.bookId; // 这一程属于哪本书（感想/进度记到它名下）
+      cstate.transcript = []; // 每次唤醒开一段新转写
       const ai = new GoogleGenAI({ apiKey: KEY });
       const openSession = (handle) =>
         ai.live.connect({
@@ -445,6 +517,23 @@ wss.on('connection', (browser, req) => {
             systemInstruction: msg.system || '',
             sessionResumption: handle ? { handle } : {}, // 开启会话续传
             contextWindowCompression: { slidingWindow: {} }, // 压缩上下文以延长会话
+            inputAudioTranscription: {}, // 转写读者语音→文字（进度摘要要用；成本按 text token 计，已进用量看板）
+            outputAudioTranscription: {}, // 转写 AI 语音→文字（进度摘要要用）
+            tools: [
+              {
+                functionDeclarations: [
+                  {
+                    name: 'saveNote',
+                    description: '记一笔：把读者读书时形成的一个想法/读后感，记进当前这本书的笔记',
+                    parameters: {
+                      type: Type.OBJECT,
+                      properties: { note: { type: Type.STRING, description: '要记下来的那条想法（你俩讨论后成型的版本）' } },
+                      required: ['note'],
+                    },
+                  },
+                ],
+              },
+            ],
           },
           callbacks: {
             onopen: () => send({ type: 'open' }),
@@ -455,11 +544,42 @@ wss.on('connection', (browser, req) => {
                   if (part.inlineData?.data) send({ type: 'audio', data: part.inlineData.data });
                 }
               }
+              // 转写回显：先看质量（中英混说准不准），暂不落库
+              if (sc?.inputTranscription?.text) {
+                const t = sc.inputTranscription.text;
+                console.log(`[转写·读者] ${t}`);
+                send({ type: 'transcript', role: 'in', text: t });
+                cstate.transcript.push({ role: 'in', text: t });
+              }
+              if (sc?.outputTranscription?.text) {
+                const t = sc.outputTranscription.text;
+                console.log(`[转写·AI] ${t}`);
+                send({ type: 'transcript', role: 'out', text: t });
+                cstate.transcript.push({ role: 'out', text: t });
+              }
               if (sc?.interrupted) send({ type: 'interrupted' });
               if (sc?.turnComplete) send({ type: 'turnComplete' });
               if (m.sessionResumptionUpdate?.newHandle) send({ type: 'resumeHandle', handle: m.sessionResumptionUpdate.newHandle });
               if (m.goAway) send({ type: 'goAway', timeLeft: m.goAway?.timeLeft });
               if (m.usageMetadata) accrue(user, cstate, m.usageMetadata);
+              if (m.toolCall?.functionCalls?.length) {
+                for (const fc of m.toolCall.functionCalls) {
+                  if (fc.name === 'saveNote' && cstate.bookId) {
+                    const note = String(fc.args?.note || '').trim();
+                    if (note) {
+                      bookMem(user, cstate.bookId).reflections.push({ text: note, at: Date.now() });
+                      flushMemory(user); // 存进这本书的想法笔记
+                      send({ type: 'noteSaved', text: note });
+                      console.log(`[想法·${cstate.bookId}] ${note}`);
+                    }
+                  }
+                }
+                try {
+                  session?.sendToolResponse({
+                    functionResponses: m.toolCall.functionCalls.map((fc) => ({ id: fc.id, name: fc.name, response: { result: 'ok' } })),
+                  });
+                } catch {}
+              }
             },
             onerror: (e) => send({ type: 'error', error: e?.message || String(e) }),
             onclose: (e) => send({ type: 'closed', reason: e?.reason || '' }),
@@ -497,6 +617,8 @@ wss.on('connection', (browser, req) => {
         } catch {}
         session = null;
       }
+      summarizeProgress(user, cstate.bookId, cstate.transcript); // 这一程转写→更新进度
+      cstate.transcript = []; // 清掉，避免 close 时重复总结
     }
   });
 
@@ -506,6 +628,8 @@ wss.on('connection', (browser, req) => {
       cstate.streamStart = 0;
     }
     flushUser(user); // 断线时把这一程用量落库
+    summarizeProgress(user, cstate.bookId, cstate.transcript); // 没走 stop 就断线，也把进度总结掉（stop 已清空则跳过）
+    cstate.transcript = [];
     if (session) {
       try {
         session.close();

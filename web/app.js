@@ -127,6 +127,17 @@ async function pullBooks() {
   if (server.length) localStorage.setItem('onboarded', '1'); // 云端已有书=老用户，换设备别再走引导
   if (localOnly) syncBooksUp(merged); // 本地有、云端没有的，补回云端
 }
+// 进书时拉这本书的感想 + 滚动进度（进度会注入 systemInstruction）
+async function pullMemory(bookId) {
+  currentMemory = { reflections: [], progress: '' };
+  if (!bookId) return;
+  try {
+    const r = await fetch('/memory?book=' + encodeURIComponent(bookId));
+    if (!r.ok) return;
+    const j = await r.json();
+    currentMemory = { reflections: j.reflections || [], progress: j.progress || '' };
+  } catch {}
+}
 // 拉取读者画像（seed）；云端有就以云端为准，落一份到本地缓存
 async function pullProfile() {
   try {
@@ -243,6 +254,15 @@ function loadProfileLocal() {
   }
 }
 let readerProfile = loadProfileLocal();
+let currentMemory = { reflections: [], progress: '' }; // 当前书的滚动进度（进书时从 /memory 拉，注入 systemInstruction）
+// 「记一笔」行为 prompt 两版，?rv=1 / ?rv=2 切换对比
+const REFLECT_V1 =
+  '读者常会一边读一边冒出对内容的想法/读后感。别只当成语言提问——把你俩讨论后成型的那个想法用「记一笔」存下来，并顺口说一句“那我们把这个记下来”。单纯的单词/语法问题不算想法，别记。';
+const REFLECT_V2 =
+  '读者常会一边读一边冒出对内容的想法/读后感。别只当成提问——跟他聊聊、也讲讲你自己的看法；聊到一个点上，把你俩讨论后成型的那个想法用「记一笔」存下来，并顺口说一句“那我们把这个记下来”。单纯的单词/语法问题不算想法，别记。';
+function reflectPrompt() {
+  return localStorage.getItem('reflectV') === '1' ? REFLECT_V1 : REFLECT_V2; // 默认 V2（有讨论）
+}
 // 纯描述读者，不规定 AI 动作；两个模式共用，由模式各自的行为规则去消化
 const LEVEL_DESC = {
   A: '词汇量较浅，四级左右的词就开始吃力，生僻词基本不认识。',
@@ -264,7 +284,8 @@ function profileClause() {
 // ---------- 系统指令（书背景 + 模式）----------
 function buildSystem() {
   const bg = currentBook && currentBook.background ? `这本书的背景资料：${currentBook.background} ` : '';
-  const book = currentBook ? `读者正在读《${currentBook.title}》${currentBook.author ? '（' + currentBook.author + '）' : ''}。${bg}` : '';
+  const prog = currentMemory.progress ? `目前读到这里：${currentMemory.progress} ` : '';
+  const book = currentBook ? `读者正在读《${currentBook.title}》${currentBook.author ? '（' + currentBook.author + '）' : ''}。${bg}${prog}` : '';
   const langPref = localStorage.getItem('replyLang') || 'auto';
   let lang;
   if (langPref === 'auto') {
@@ -288,6 +309,7 @@ function buildSystem() {
       `开场先读出这一页的第一句——说"这一页从……开始"，然后把球抛给他：请他读下一句、或说说这句大概什么意思。` +
       `之后一句一句往下：他读或答完，顺就肯定一下、带到下一句；卡在某个词读不出来就帮他读、点一下意思；读错或理解偏了就轻轻纠正；难句他答不上来，再简短帮他拆一下，别长篇。` +
       `每次只推进一两句，给他开口的空档；他问你就答。自然口语、简短，像坐在他旁边陪他读。` +
+      reflectPrompt() +
       profileClause()
     );
   }
@@ -317,6 +339,7 @@ async function startCamera() {
     await video.play().catch(() => {});
     await listCameras();
     log('Camera on: ' + (camStream.getVideoTracks()[0]?.label || 'unknown'));
+    startPageBuffer();
   } catch (e) {
     log('Camera error: ' + e.name + ' ' + e.message);
     setStatus('Camera failed to open: ' + e.name);
@@ -352,6 +375,56 @@ function captureFrameBase64(maxEdge = 768) {
   captureCanvas.height = h;
   captureCanvas.getContext('2d').drawImage(video, 0, 0, w, h);
   return captureCanvas.toDataURL('image/jpeg', 0.6).split(',')[1];
+}
+
+// ---------- 默读页缓冲 ----------
+// 陪伴模式不开流时，读者翻过的页 AI 看不到。这里在后台每隔几秒抓一帧、翻页才记，
+// 唤醒时把这几张默读过的页作为静默上下文补给模型，补上「它不知道我刚读了啥」的坑。
+let pageBuffer = [];
+let lastThumb = null;
+let bufferTimer = null;
+const BUFFER_MAX = 4; // 最多留最近 4 张不同的页
+const bufCanvas = document.createElement('canvas');
+function thumbData() {
+  if (!video.videoWidth) return null;
+  const tw = 48;
+  const th = Math.max(1, Math.round((48 * video.videoHeight) / video.videoWidth));
+  bufCanvas.width = tw;
+  bufCanvas.height = th;
+  const ctx = bufCanvas.getContext('2d');
+  ctx.drawImage(video, 0, 0, tw, th);
+  return ctx.getImageData(0, 0, tw, th).data;
+}
+function thumbDiff(a, b) {
+  if (!a || !b || a.length !== b.length) return Infinity;
+  let sum = 0;
+  let n = 0;
+  for (let i = 0; i < a.length; i += 4) {
+    sum += Math.abs(a[i] - b[i]); // 看 R 通道就够判翻页
+    n++;
+  }
+  return n ? sum / n : Infinity;
+}
+function bufferTick() {
+  if (paused) return;
+  const t = thumbData();
+  if (!t) return;
+  if (thumbDiff(t, lastThumb) <= 12) return; // 画面没明显变（同一页）→ 不记
+  lastThumb = t;
+  if (streaming) return; // 开流时模型已实时看到，无需缓冲
+  const f = captureFrameBase64();
+  if (!f) return;
+  pageBuffer.push(f);
+  if (pageBuffer.length > BUFFER_MAX) pageBuffer.shift();
+}
+function startPageBuffer() {
+  clearInterval(bufferTimer);
+  lastThumb = null; // 相机（重）开，重新校准
+  bufferTimer = setInterval(bufferTick, 4000);
+}
+function stopPageBuffer() {
+  clearInterval(bufferTimer);
+  bufferTimer = null;
 }
 
 // ---------- 麦克风采集（16kHz PCM）----------
@@ -624,7 +697,10 @@ async function wake() {
   ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/live');
   ws.onopen = () => {
     streaming = true;
-    ws.send(JSON.stringify({ type: 'start', system: buildSystem(), handle: resumeHandle }));
+    ws.send(JSON.stringify({ type: 'start', system: buildSystem(), handle: resumeHandle, bookId: currentBook?.id || '' }));
+    // 把默读时翻过的几页作为静默上下文补给模型（陪伴模式失忆的坑），发完清空、避免下次重发
+    for (const f of pageBuffer) ws.send(JSON.stringify({ type: 'video', data: f }));
+    pageBuffer = [];
     // 0.5 帧/秒发视频
     videoTimer = setInterval(() => {
       const f = captureFrameBase64();
@@ -662,6 +738,12 @@ async function wake() {
       startAutoStop();
     } else if (m.type === 'resumeHandle') {
       resumeHandle = m.handle; // 存住，重连/恢复时带回去
+    } else if (m.type === 'transcript') {
+      log((m.role === 'in' ? '你：' : 'AI：') + m.text); // 转写回显，看中英混说准不准
+    } else if (m.type === 'noteSaved') {
+      currentMemory.reflections.push({ text: m.text, at: Date.now() }); // 当场进当前书的想法列表
+      caption('✓ 记下了：' + m.text);
+      setStatus('已记下一条想法');
     } else if (m.type === 'goAway') {
       log('Session nearing limit (' + (m.timeLeft || '') + '), resuming…');
       reconnectGemini(); // 2 分钟上限前主动续传重连，体验上无缝
@@ -725,6 +807,9 @@ function onOrbTap() {
 // 彻底关掉相机与麦克风（回主页时用，给人「确实结束了」的踏实感）
 function stopAllMedia() {
   if (streaming) stopStream();
+  stopPageBuffer();
+  pageBuffer = [];
+  lastThumb = null;
   if (camStream) camStream.getTracks().forEach((t) => t.stop());
   if (micStream) micStream.getTracks().forEach((t) => t.stop());
   camStream = null;
@@ -752,6 +837,8 @@ async function enterBook(b) {
   currentBook = b;
   localStorage.setItem('currentBook', b.id);
   resumeHandle = null; // 换书=新对话
+  pageBuffer = []; // 换书清空默读缓冲，别把上一本的页带过来
+  await pullMemory(b.id); // 拉这本书的进度（注入）+ 感想
   setBookTitle();
   $('libraryHome').hidden = true;
   $('topBar').hidden = false;
@@ -797,6 +884,18 @@ $('homeSettings').onclick = openSettings;
 $('readSettings').onclick = openSettings;
 $('flipBtn').onclick = () => flipCamera();
 $('helpBtn').onclick = () => ($('helpPanel').hidden = false);
+function renderNotes() {
+  const wrap = $('notesList');
+  if (!wrap) return;
+  const notes = (currentMemory.reflections || []).slice().reverse();
+  wrap.innerHTML = notes.length
+    ? notes.map((n) => `<div class="note-item">${esc(n.text)}</div>`).join('')
+    : '<div class="notes-empty">还没有记下想法。<br>读书时随口聊聊你的感想，它会顺手帮你记。</div>';
+}
+$('notesBtn').onclick = () => {
+  renderNotes();
+  $('notesPanel').hidden = false;
+};
 orb.addEventListener('click', onOrbTap);
 document.querySelectorAll('[data-close]').forEach((b) => (b.onclick = () => ($(b.dataset.close).hidden = true)));
 document.querySelectorAll('.overlay').forEach((ov) =>
@@ -946,6 +1045,8 @@ $('obBookSave').onclick = () => {
 
 // ---------- 启动 ----------
 (async function init() {
+  const rv = new URLSearchParams(location.search).get('rv');
+  if (rv === '1' || rv === '2') localStorage.setItem('reflectV', rv); // 切「记一笔」prompt 版本对比
   try {
     const st = await (await fetch('/status')).json();
     if (st.ready) {

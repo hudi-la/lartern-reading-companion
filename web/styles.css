@@ -918,6 +918,30 @@ body {
   letter-spacing: 0.2px;
   padding: 12px 14px;
 }
+/* 这本书的想法：笔记列表 */
+.notes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+.note-item {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 15px;
+  line-height: 1.5;
+  color: #e7e7ec;
+}
+.notes-empty {
+  color: #9a9aa2;
+  font-size: 14px;
+  line-height: 1.6;
+  text-align: center;
+  padding: 24px 8px;
+}
 .ob-howto {
   list-style: none;
   padding: 0;
