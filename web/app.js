@@ -233,6 +233,16 @@ function renderLibrary() {
     const c = document.createElement('div');
     buildCover(c, b);
     c.onclick = () => enterBook(b);
+    const nb = document.createElement('button');
+    nb.className = 'card-notes';
+    nb.title = 'Notes';
+    nb.innerHTML =
+      '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
+    nb.onclick = (e) => {
+      e.stopPropagation(); // 只看想法，不进入阅读
+      openBookNotesById(b);
+    };
+    c.appendChild(nb);
     grid.appendChild(c);
   });
   const add = document.createElement('div');
@@ -925,6 +935,22 @@ async function openAllNotes() {
     : '<div class="notes-empty">还没有记下想法。<br>读书时随口聊聊你的感想，它会顺手帮你记。</div>';
 }
 $('homeNotesBtn').onclick = openAllNotes;
+// 单本书的想法（从书卡点进来）
+async function openBookNotesById(book) {
+  $('notesTitle').textContent = `《${book.title}》的想法`;
+  const wrap = $('notesList');
+  wrap.innerHTML = '<div class="notes-empty">加载中…</div>';
+  $('notesPanel').hidden = false;
+  let mem = { reflections: [] };
+  try {
+    const r = await fetch('/memory?book=' + encodeURIComponent(book.id));
+    if (r.ok) mem = await r.json();
+  } catch {}
+  const notes = (mem.reflections || []).slice().reverse();
+  wrap.innerHTML = notes.length
+    ? notes.map((n) => `<div class="note-item">${esc(n.text)}</div>`).join('')
+    : '<div class="notes-empty">这本书还没有记下想法。</div>';
+}
 orb.addEventListener('click', onOrbTap);
 document.querySelectorAll('[data-close]').forEach((b) => (b.onclick = () => ($(b.dataset.close).hidden = true)));
 document.querySelectorAll('.overlay').forEach((ov) =>
