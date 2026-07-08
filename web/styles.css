@@ -942,6 +942,15 @@ body {
   text-align: center;
   padding: 24px 8px;
 }
+.notes-book + .notes-book {
+  margin-top: 18px;
+}
+.notes-book-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #9a9aa2;
+  margin-bottom: 8px;
+}
 .ob-howto {
   list-style: none;
   padding: 0;

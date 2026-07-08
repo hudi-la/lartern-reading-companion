@@ -893,9 +893,38 @@ function renderNotes() {
     : '<div class="notes-empty">还没有记下想法。<br>读书时随口聊聊你的感想，它会顺手帮你记。</div>';
 }
 $('notesBtn').onclick = () => {
+  $('notesTitle').textContent = '这本书的想法';
   renderNotes();
   $('notesPanel').hidden = false;
 };
+// 书房入口：一次看全部书的想法，按书分组，方便读完回来采收
+async function openAllNotes() {
+  const wrap = $('notesList');
+  $('notesTitle').textContent = '读书想法';
+  wrap.innerHTML = '<div class="notes-empty">加载中…</div>';
+  $('notesPanel').hidden = false;
+  let all = {};
+  try {
+    const r = await fetch('/memory');
+    if (r.ok) all = (await r.json()).books || {};
+  } catch {}
+  const books = loadBooks();
+  const titleOf = (id) => books.find((b) => b.id === id)?.title || '未知的书';
+  const sections = Object.entries(all)
+    .filter(([, m]) => (m.reflections || []).length)
+    .map(([id, m]) => {
+      const items = m.reflections
+        .slice()
+        .reverse()
+        .map((n) => `<div class="note-item">${esc(n.text)}</div>`)
+        .join('');
+      return `<div class="notes-book"><div class="notes-book-title">${esc(titleOf(id))}</div>${items}</div>`;
+    });
+  wrap.innerHTML = sections.length
+    ? sections.join('')
+    : '<div class="notes-empty">还没有记下想法。<br>读书时随口聊聊你的感想，它会顺手帮你记。</div>';
+}
+$('homeNotesBtn').onclick = openAllNotes;
 orb.addEventListener('click', onOrbTap);
 document.querySelectorAll('[data-close]').forEach((b) => (b.onclick = () => ($(b.dataset.close).hidden = true)));
 document.querySelectorAll('.overlay').forEach((ov) =>
