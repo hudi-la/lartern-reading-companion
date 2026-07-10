@@ -934,7 +934,7 @@ async function openAllNotes() {
     ? sections.join('')
     : '<div class="notes-empty">还没有记下想法。<br>读书时随口聊聊你的感想，它会顺手帮你记。</div>';
 }
-$('homeNotesBtn').onclick = openAllNotes;
+// openAllNotes 暂无入口：顶部汇总按钮已移除，跨书采收待重新设计 UI/位置后复用此函数
 // 单本书的想法（从书卡点进来）
 async function openBookNotesById(book) {
   $('notesTitle').textContent = `《${book.title}》的想法`;
