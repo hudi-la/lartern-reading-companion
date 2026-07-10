@@ -608,8 +608,15 @@ body {
 }
 .book-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  /* 列数随可用宽度自适应：手机 2 列，iPad 横屏 / 桌面自动铺成书架，
+     封面始终保持在 ~150–210px，不会被宽屏撑到全屏那么大 */
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   gap: 12px;
+}
+@media (min-width: 700px) {
+  .book-grid {
+    gap: 18px;
+  }
 }
 .book-card {
   aspect-ratio: 2 / 3;
