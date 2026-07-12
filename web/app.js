@@ -888,10 +888,108 @@ $('backBtn').onclick = () => goHome();
 $('modeSelect').onchange = (e) => setMode(e.target.value);
 function openSettings() {
   $('modeSelect').value = mode;
+  // 账号 + 自带 key：仅邮箱登录模式显示
+  if (me && me.authMode === 'email') {
+    $('keyField').hidden = false;
+    $('accountRow').hidden = false;
+    $('acctEmail').textContent = me.email || '';
+    $('keyStatus').textContent = me.hasKey ? 'set ✓' : 'not set';
+    $('keyInput').value = '';
+    $('keySettingsHint').textContent = '';
+  } else {
+    $('keyField').hidden = true;
+    $('accountRow').hidden = true;
+  }
   $('settingsPanel').hidden = false;
 }
 $('homeSettings').onclick = openSettings;
 $('readSettings').onclick = openSettings;
+
+// ---------- 账号 + BYOK（自带 Gemini key）----------
+let me = null;
+async function fetchMe() {
+  try {
+    me = await (await fetch('/me')).json();
+  } catch {
+    me = null;
+  }
+  return me;
+}
+function showKeyGate() {
+  $('keyGate').hidden = false;
+  $('keyGateHint').textContent = '';
+  setTimeout(() => $('keyGateInput').focus(), 50);
+}
+async function saveKey(val, hintEl) {
+  const key = (val || '').trim();
+  if (!key) {
+    hintEl.textContent = 'Please paste your key';
+    return false;
+  }
+  hintEl.textContent = 'Checking…';
+  try {
+    const r = await fetch('/key', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key }) });
+    const j = await r.json().catch(() => ({}));
+    if (r.ok && j.ok) {
+      hintEl.textContent = '';
+      return true;
+    }
+    hintEl.textContent = j.error || 'Key rejected';
+    return false;
+  } catch {
+    hintEl.textContent = 'Network error';
+    return false;
+  }
+}
+// 决定落点：没登录门禁挡过了，这里只分「引导 / 书房」
+function proceedAfterAuth() {
+  const books = loadBooks();
+  const cur = localStorage.getItem('currentBook');
+  currentBook = books.find((b) => b.id === cur) || null;
+  setBookTitle();
+  setState('stopped');
+  if (!localStorage.getItem('onboarded')) {
+    startOnboarding();
+    return;
+  }
+  goHome();
+}
+$('keyGateSave').onclick = async () => {
+  $('keyGateSave').disabled = true;
+  const ok = await saveKey($('keyGateInput').value, $('keyGateHint'));
+  $('keyGateSave').disabled = false;
+  if (ok) {
+    $('keyGate').hidden = true;
+    await fetchMe();
+    proceedAfterAuth();
+  }
+};
+$('keyGateInput').addEventListener('keydown', (e) => e.key === 'Enter' && $('keyGateSave').click());
+$('keySave').onclick = async () => {
+  $('keySave').disabled = true;
+  const ok = await saveKey($('keyInput').value, $('keySettingsHint'));
+  $('keySave').disabled = false;
+  if (ok) {
+    await fetchMe();
+    $('keyStatus').textContent = 'set ✓';
+    $('keyInput').value = '';
+    $('keySettingsHint').textContent = 'Saved';
+  }
+};
+$('keyClear').onclick = async () => {
+  try {
+    await fetch('/key', { method: 'DELETE' });
+  } catch {}
+  await fetchMe();
+  $('keyStatus').textContent = 'not set';
+  $('keySettingsHint').textContent = 'Removed';
+};
+$('logoutBtn').onclick = async () => {
+  try {
+    await fetch('/logout', { method: 'POST' });
+  } catch {}
+  location.href = '/login';
+};
 $('flipBtn').onclick = () => flipCamera();
 $('helpBtn').onclick = () => ($('helpPanel').hidden = false);
 function renderNotes() {
@@ -1115,16 +1213,12 @@ $('obBookSave').onclick = () => {
   await pullBooks(); // 先把云端书库拉下来合并，再决定落点
   await pullProfile(); // 拉读者画像（注入精读模式）
 
-  const books = loadBooks();
-  const cur = localStorage.getItem('currentBook');
-  currentBook = books.find((b) => b.id === cur) || null;
-  setBookTitle();
-  setState('stopped');
-
-  if (!localStorage.getItem('onboarded')) {
-    startOnboarding(); // 第一次进门：走引导，权限和第一本书都在里面拿
+  // 邮箱模式下没配自带 key（且非 owner）：先挡在填 key 页，填了才继续
+  await fetchMe();
+  if (me && me.byokRequired && !me.hasKey) {
+    showKeyGate();
     return;
   }
 
-  goHome(); // 老用户：落到书房主页，相机关闭
+  proceedAfterAuth();
 })();

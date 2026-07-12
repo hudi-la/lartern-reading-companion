@@ -28,6 +28,18 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '';
 const MODEL = process.env.GEMINI_LIVE_MODEL || 'gemini-3.1-flash-live-preview';
 
+// ===== 邮箱验证码登录（Supabase Auth OTP）+ BYOK 配置 =====
+// 需要 SUPABASE_URL + SUPABASE_ANON_KEY + SESSION_SECRET 三者齐备才启用「邮箱验证码」模式；
+// 缺任一则回退旧的邀请码登录（ACCESS_USERS），保证部署到缺变量的环境也不崩。
+const ANON_KEY = process.env.SUPABASE_ANON_KEY || '';
+const SESSION_SECRET = process.env.SESSION_SECRET || '';
+const APP_ENC_KEY = process.env.APP_ENC_KEY || '';
+const EMAIL_AUTH = Boolean(process.env.SUPABASE_URL && ANON_KEY && SESSION_SECRET);
+// owner 邮箱：无自带 key 时回落到全局 GEMINI_API_KEY（你自己不用粘 key，别人必须自带）
+const OWNER_EMAILS = new Set(
+  (process.env.OWNER_EMAILS || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean)
+);
+
 // 访问控制：每个测试用户一个邀请码（ACCESS_USERS="alice:码A,bob:码B"）。
 // 兼容老配置：只设了 ACCESS_PASSWORD 时当作单用户「我」。本地都不设=不限制。
 const hash = (s) => crypto.createHash('sha256').update(s).digest('hex');
@@ -65,16 +77,47 @@ function localDirect(req) {
 function devAs(req) {
   return localDirect(req) ? decodeURIComponent(parseCookies(req).rc_as || '') : '';
 }
+// 邮箱模式的会话 cookie：值 = base64url(邮箱).HMAC(邮箱)，防伪造（不能存明文邮箱，否则谁都能冒充）
+function signSession(email) {
+  const mac = crypto.createHmac('sha256', SESSION_SECRET).update(email).digest('base64url');
+  return Buffer.from(email).toString('base64url') + '.' + mac;
+}
+function verifySession(cookie) {
+  if (!cookie || cookie.indexOf('.') < 0) return '';
+  const dot = cookie.lastIndexOf('.');
+  const b64 = cookie.slice(0, dot);
+  const mac = cookie.slice(dot + 1);
+  let email;
+  try {
+    email = Buffer.from(b64, 'base64url').toString('utf8');
+  } catch {
+    return '';
+  }
+  const good = crypto.createHmac('sha256', SESSION_SECRET).update(email).digest('base64url');
+  const a = Buffer.from(mac);
+  const b = Buffer.from(good);
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return '';
+  return email;
+}
+
 function isAuthed(req) {
-  if (!AUTH_ON) return true; // 没配用户 = 放行（本地开发）
   if (devAs(req)) return true; // 本机 ?as= 测试会话放行
+  if (EMAIL_AUTH) return Boolean(verifySession(parseCookies(req).rc_auth || ''));
+  if (!AUTH_ON) return true; // 没配用户 = 放行（本地开发）
   return TOKEN_TO_USER.has(parseCookies(req).rc_auth || '');
 }
 function getUser(req) {
   const as = devAs(req);
   if (as) return as; // 本机 ?as= 覆盖：测新用户用
+  if (EMAIL_AUTH) return verifySession(parseCookies(req).rc_auth || '') || '匿名';
   if (!AUTH_ON) return '本机';
   return TOKEN_TO_USER.get(parseCookies(req).rc_auth || '') || '匿名';
+}
+// owner 判定：邮箱模式下用量看板/重置仅 owner 可见（用户名=邮箱，不能泄露给自助注册的人）。
+// 非邮箱模式（invite/open）沿用旧行为，不限制。
+function isOwnerReq(req) {
+  if (!EMAIL_AUTH) return true;
+  return OWNER_EMAILS.has(String(getUser(req)).toLowerCase());
 }
 
 const VISION_MODEL = process.env.GEMINI_VISION_MODEL || 'gemini-2.5-flash';
@@ -88,6 +131,62 @@ const supa =
   process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_KEY
     ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { auth: { persistSession: false } })
     : null;
+// 邮箱验证码用 anon key（走 Supabase Auth 的 signInWithOtp / verifyOtp）
+const supaAuth = EMAIL_AUTH
+  ? createClient(process.env.SUPABASE_URL, ANON_KEY, { auth: { persistSession: false } })
+  : null;
+
+// ===== BYOK：每个用户自带的 Gemini key，AES-256-GCM 加密存 Supabase =====
+const ENC_KEY = APP_ENC_KEY ? crypto.createHash('sha256').update(APP_ENC_KEY).digest() : null;
+function encSecret(plain) {
+  const iv = crypto.randomBytes(12);
+  const c = crypto.createCipheriv('aes-256-gcm', ENC_KEY, iv);
+  const ct = Buffer.concat([c.update(plain, 'utf8'), c.final()]);
+  return [iv.toString('base64'), c.getAuthTag().toString('base64'), ct.toString('base64')].join(':');
+}
+function decSecret(blob) {
+  try {
+    const [iv, tag, ct] = String(blob).split(':');
+    const d = crypto.createDecipheriv('aes-256-gcm', ENC_KEY, Buffer.from(iv, 'base64'));
+    d.setAuthTag(Buffer.from(tag, 'base64'));
+    return Buffer.concat([d.update(Buffer.from(ct, 'base64')), d.final()]).toString('utf8');
+  } catch {
+    return '';
+  }
+}
+const keyByUser = new Map(); // 邮箱 -> 解密后的 Gemini key（放内存里供调用）
+async function loadSecrets() {
+  if (!supa || !ENC_KEY) return;
+  const { data, error } = await supa.from('user_secrets').select('*');
+  if (error) return console.error('Supabase 读取用户密钥失败:', error.message);
+  for (const r of data || []) {
+    const k = decSecret(r.gemini_key_enc || '');
+    if (k) keyByUser.set(r.username, k);
+  }
+  console.log(`用户密钥已从 Supabase 载入：${keyByUser.size} 个`);
+}
+loadSecrets();
+async function setUserKey(name, key) {
+  keyByUser.set(name, key);
+  if (supa && ENC_KEY) {
+    const { error } = await supa
+      .from('user_secrets')
+      .upsert({ username: name, gemini_key_enc: encSecret(key), updated_at: new Date().toISOString() }, { onConflict: 'username' });
+    if (error) console.error('Supabase 写入用户密钥失败:', error.message);
+  }
+}
+async function clearUserKey(name) {
+  keyByUser.delete(name);
+  if (supa) await supa.from('user_secrets').delete().eq('username', name);
+}
+// 该用户实际能用的 key：自己存的 > owner 回落全局；都没有则空（=还没配 key）
+function keyFor(name) {
+  return keyByUser.get(name) || (OWNER_EMAILS.has(String(name).toLowerCase()) ? KEY : '');
+}
+function hasKey(name) {
+  return Boolean(keyFor(name));
+}
+
 const USAGE_FILE = path.join(__dirname, 'data', 'usage.json');
 
 // 内存里按用户名持有用量；Supabase/文件是持久备份，会话结束时落库
@@ -265,7 +364,8 @@ loadMemory();
 
 // 会话结束时把这一程的转写总结进书的「滚动进度」；太短就跳过，省一次 flash 调用
 async function summarizeProgress(name, bookId, transcript) {
-  if (!KEY || !bookId || !transcript.length) return;
+  const key = keyFor(name);
+  if (!key || !bookId || !transcript.length) return;
   const text = transcript.map((t) => (t.role === 'in' ? '读者' : 'AI') + '：' + t.text).join('\n').trim();
   if (text.length < 80) return; // 太短，没啥可记
   const mem = bookMem(name, bookId);
@@ -273,7 +373,7 @@ async function summarizeProgress(name, bookId, transcript) {
     '下面是读者精读一本英文书时、这一小段的语音转写。请用两三句中文更新「阅读进度」：读到书里哪儿、讲/聊了什么、读者卡住或特别在意的点；抓要点、别逐句复述。\n\n' +
     '已有进度：' + (mem.progress || '（还没有）') + '\n\n这一段转写：\n' + text + '\n\n只输出更新后的进度摘要本身。';
   try {
-    const ai = new GoogleGenAI({ apiKey: KEY });
+    const ai = new GoogleGenAI({ apiKey: key });
     const r = await ai.models.generateContent({ model: VISION_MODEL, contents: [{ role: 'user', parts: [{ text: prompt }] }] });
     const summary = (r.text || '').trim();
     if (summary) {
@@ -359,6 +459,40 @@ app.post('/login', (req, res) => {
   res.status(401).json({ ok: false });
 });
 
+// 邮箱验证码登录：请求验证码 → 校验 → 设签名会话 cookie（邮箱模式启用时才有效）
+app.post('/auth/request', async (req, res) => {
+  if (!EMAIL_AUTH) return res.status(400).json({ ok: false, error: '未启用邮箱登录' });
+  const email = String(req.body?.email || '').trim().toLowerCase();
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return res.status(400).json({ ok: false, error: '邮箱格式不对' });
+  const { error } = await supaAuth.auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
+  if (error) return res.status(429).json({ ok: false, error: error.message || '发送失败，请稍后再试' });
+  res.json({ ok: true });
+});
+app.post('/auth/verify', async (req, res) => {
+  if (!EMAIL_AUTH) return res.status(400).json({ ok: false, error: '未启用邮箱登录' });
+  const email = String(req.body?.email || '').trim().toLowerCase();
+  const code = String(req.body?.code || '').trim();
+  const { data, error } = await supaAuth.auth.verifyOtp({ email, token: code, type: 'email' });
+  if (error || !data?.user) return res.status(401).json({ ok: false, error: '验证码错误或已过期' });
+  const secure = req.headers['x-forwarded-proto'] === 'https' ? '; Secure' : '';
+  res.setHeader('Set-Cookie', `rc_auth=${signSession(email)}; HttpOnly; Path=/; Max-Age=2592000; SameSite=Lax${secure}`);
+  if (supa)
+    supa
+      .from('accounts')
+      .upsert({ username: email, last_seen: new Date().toISOString() }, { onConflict: 'username' })
+      .then(() => {}, () => {});
+  res.json({ ok: true, email });
+});
+app.post('/logout', (req, res) => {
+  res.setHeader('Set-Cookie', 'rc_auth=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax');
+  res.json({ ok: true });
+});
+
+// 登录模式 / 就绪状态：门禁之前公开，登录页据此切换「邮箱验证码 / 邀请码」界面
+app.get('/status', (req, res) =>
+  res.json({ ready: Boolean(KEY), model: MODEL, authMode: EMAIL_AUTH ? 'email' : AUTH_ON ? 'invite' : 'open' })
+);
+
 // 门禁：未登录的，网页跳登录页，接口返回 401
 app.use((req, res, next) => {
   if (isAuthed(req)) return next();
@@ -368,15 +502,46 @@ app.use((req, res, next) => {
 
 // no-cache：开发/迭代期保证手机和浏览器永远拿最新前端，避免「改了看不到」
 app.use(express.static(path.join(__dirname, 'web'), { etag: false, lastModified: false, setHeaders: (res) => res.setHeader('Cache-Control', 'no-store') }));
-app.get('/status', (req, res) => res.json({ ready: Boolean(KEY), model: MODEL }));
+
+// 当前登录者 + 是否已配 key（前端据此决定要不要挡在「填 key」页）
+app.get('/me', (req, res) => {
+  const email = getUser(req);
+  res.json({
+    ok: true,
+    email,
+    hasKey: hasKey(email),
+    isOwner: OWNER_EMAILS.has(String(email).toLowerCase()),
+    byokRequired: EMAIL_AUTH, // 邮箱模式下没 key 不让用
+    authMode: EMAIL_AUTH ? 'email' : AUTH_ON ? 'invite' : 'open',
+  });
+});
+// 设置 / 清除自己的 Gemini key。存前做一次极小调用校验，避免存进坏 key
+app.put('/key', async (req, res) => {
+  const email = getUser(req);
+  const key = String(req.body?.key || '').trim();
+  if (!key) return res.status(400).json({ ok: false, error: 'key 为空' });
+  try {
+    const ai = new GoogleGenAI({ apiKey: key });
+    await ai.models.generateContent({ model: VISION_MODEL, contents: [{ role: 'user', parts: [{ text: 'ping' }] }] });
+  } catch (e) {
+    return res.status(400).json({ ok: false, error: '这个 key 用不了：' + (e?.message || String(e)) });
+  }
+  await setUserKey(email, key);
+  res.json({ ok: true });
+});
+app.delete('/key', async (req, res) => {
+  await clearUserKey(getUser(req));
+  res.json({ ok: true });
+});
 
 // 一次性识别封面：图片 -> 书名/作者/背景 JSON
 app.post('/identify', async (req, res) => {
-  if (!KEY) return res.json({ ok: false, error: '未设置 GEMINI_API_KEY' });
+  const key = keyFor(getUser(req));
+  if (!key) return res.json({ ok: false, error: '请先在设置里填入你的 Gemini API key' });
   const image = req.body?.image;
   if (!image) return res.json({ ok: false, error: '没有图像' });
   try {
-    const ai = new GoogleGenAI({ apiKey: KEY });
+    const ai = new GoogleGenAI({ apiKey: key });
     const prompt =
       '这是一本书的封面照片。先用 Google 搜索查一下这本书（作者、年代、主题、评价、核心思想），' +
       '然后仅用 JSON 回复（JSON 之外不要任何文字）：' +
@@ -430,8 +595,9 @@ app.get('/memory', (req, res) => {
   res.json({ ok: true, books: all });
 });
 
-// 用量看板数据
+// 用量看板数据（邮箱模式下仅 owner 可见，避免泄露其他用户邮箱/用量）
 app.get('/usage', (req, res) => {
+  if (!isOwnerReq(req)) return res.status(403).json({ error: 'forbidden' });
   const withCost = (u) => {
     const cost = usageCost(u);
     const hours = u.streamingMs / 3600000;
@@ -450,6 +616,7 @@ app.get('/usage', (req, res) => {
   res.json({ users, total: { username: '合计', ...withCost(total) }, rates: RATES, liveModel: MODEL });
 });
 app.post('/usage/reset', async (req, res) => {
+  if (!isOwnerReq(req)) return res.status(403).json({ error: 'forbidden' });
   const user = req.body?.user;
   if (user) {
     usageByUser.delete(user);
@@ -464,7 +631,10 @@ app.post('/usage/reset', async (req, res) => {
   }
   res.json({ ok: true });
 });
-app.get('/dashboard', (req, res) => res.sendFile(path.join(__dirname, 'web', 'dashboard.html')));
+app.get('/dashboard', (req, res) => {
+  if (!isOwnerReq(req)) return res.status(403).send('Forbidden');
+  res.sendFile(path.join(__dirname, 'web', 'dashboard.html'));
+});
 
 // 有证书就用 HTTPS（手机调摄像头/麦克风必须是安全上下文），否则退回 HTTP（仅 Mac localhost 可用）
 const certDir = path.join(__dirname, 'certs');
@@ -492,7 +662,8 @@ wss.on('connection', (browser, req) => {
     }
 
     if (msg.type === 'start') {
-      if (!KEY) return send({ type: 'error', error: '未设置 GEMINI_API_KEY' });
+      const key = keyFor(user);
+      if (!key) return send({ type: 'error', error: '请先在设置里填入你的 Gemini API key' });
       if (session) {
         try {
           session.close();
@@ -506,7 +677,7 @@ wss.on('connection', (browser, req) => {
       dirtyUsers.add(user);
       cstate.bookId = msg.bookId || cstate.bookId; // 这一程属于哪本书（感想/进度记到它名下）
       cstate.transcript = []; // 每次唤醒开一段新转写
-      const ai = new GoogleGenAI({ apiKey: KEY });
+      const ai = new GoogleGenAI({ apiKey: key });
       const openSession = (handle) =>
         ai.live.connect({
           model: MODEL,

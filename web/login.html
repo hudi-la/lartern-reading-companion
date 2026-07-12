@@ -17,35 +17,134 @@
         backdrop-filter: blur(20px);
       }
       h1 { font-size: 20px; margin: 0 0 6px; }
-      p { color: #9a9aa2; font-size: 13px; margin: 0 0 18px; }
+      p { color: #9a9aa2; font-size: 13px; margin: 0 0 18px; line-height: 1.5; }
       input {
         width: 100%; padding: 12px 14px; border-radius: 12px; border: none; font-size: 15px;
         margin-bottom: 12px; background: #fff; color: #1d1d1f;
       }
+      #code { letter-spacing: 6px; text-align: center; font-size: 20px; }
       button {
         width: 100%; padding: 12px; border-radius: 12px; border: none; font-size: 15px; font-weight: 600;
         background: #0a84ff; color: #fff; cursor: pointer;
       }
-      .err { color: #ff6b6b; font-size: 13px; height: 18px; margin-top: 8px; }
+      button:disabled { opacity: 0.55; cursor: default; }
+      .link { background: none; color: #9a9aa2; font-weight: 400; font-size: 13px; padding: 8px; margin-top: 4px; }
+      .err { color: #ff6b6b; font-size: 13px; min-height: 18px; margin-top: 8px; }
+      [hidden] { display: none; }
     </style>
   </head>
   <body>
     <div class="card">
       <h1>📖 Reading Companion</h1>
-      <p>Enter your invite code</p>
-      <input id="pw" type="password" placeholder="Invite code" autofocus />
-      <button id="go">Enter</button>
+
+      <!-- 邮箱模式 · 第一步：输邮箱 -->
+      <div id="stepEmail" hidden>
+        <p>Enter your email — we'll send you a 6-digit code.</p>
+        <input id="email" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" autofocus />
+        <button id="sendBtn">Send code</button>
+      </div>
+
+      <!-- 邮箱模式 · 第二步：输验证码 -->
+      <div id="stepCode" hidden>
+        <p>Code sent to <b id="emailEcho"></b>. Enter it below.</p>
+        <input id="code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="······" />
+        <button id="verifyBtn">Verify &amp; enter</button>
+        <button class="link" id="backBtn">Use a different email</button>
+      </div>
+
+      <!-- 邀请码模式（回退） -->
+      <div id="stepInvite" hidden>
+        <p>Enter your invite code</p>
+        <input id="pw" type="password" placeholder="Invite code" />
+        <button id="inviteBtn">Enter</button>
+      </div>
+
       <div class="err" id="err"></div>
     </div>
+
     <script>
-      async function login() {
-        const pw = document.getElementById('pw').value;
-        const r = await fetch('/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: pw }) });
-        if (r.ok) location.href = '/';
-        else document.getElementById('err').textContent = 'Wrong code';
+      const $ = (id) => document.getElementById(id);
+      const err = (m) => ($('err').textContent = m || '');
+      const show = (id) => {
+        for (const s of ['stepEmail', 'stepCode', 'stepInvite']) $(s).hidden = s !== id;
+        err('');
+      };
+
+      // 邮箱模式
+      async function sendCode() {
+        const email = $('email').value.trim();
+        if (!email) return err('Please enter your email');
+        $('sendBtn').disabled = true;
+        err('');
+        try {
+          const r = await fetch('/auth/request', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }),
+          });
+          const j = await r.json().catch(() => ({}));
+          if (r.ok && j.ok) {
+            $('emailEcho').textContent = email;
+            show('stepCode');
+            setTimeout(() => $('code').focus(), 50);
+          } else {
+            err(j.error || 'Failed to send. Try again in a bit.');
+          }
+        } catch {
+          err('Network error');
+        } finally {
+          $('sendBtn').disabled = false;
+        }
       }
-      document.getElementById('go').onclick = login;
-      document.getElementById('pw').addEventListener('keydown', (e) => { if (e.key === 'Enter') login(); });
+      async function verifyCode() {
+        const email = $('email').value.trim();
+        const code = $('code').value.trim();
+        if (code.length < 6) return err('Enter the 6-digit code');
+        $('verifyBtn').disabled = true;
+        err('');
+        try {
+          const r = await fetch('/auth/verify', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, code }),
+          });
+          const j = await r.json().catch(() => ({}));
+          if (r.ok && j.ok) location.href = '/';
+          else err(j.error || 'Wrong or expired code');
+        } catch {
+          err('Network error');
+        } finally {
+          $('verifyBtn').disabled = false;
+        }
+      }
+
+      // 邀请码模式
+      async function loginInvite() {
+        const pw = $('pw').value;
+        const r = await fetch('/login', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: pw }),
+        });
+        if (r.ok) location.href = '/';
+        else err('Wrong code');
+      }
+
+      // 据后端模式选界面
+      fetch('/status')
+        .then((r) => r.json())
+        .then((s) => {
+          if (s.authMode === 'email') {
+            show('stepEmail');
+            $('email').focus();
+          } else {
+            show('stepInvite');
+            $('pw').focus();
+          }
+        })
+        .catch(() => show('stepInvite'));
+
+      $('sendBtn').onclick = sendCode;
+      $('verifyBtn').onclick = verifyCode;
+      $('backBtn').onclick = () => show('stepEmail');
+      $('inviteBtn').onclick = loginInvite;
+      $('email').addEventListener('keydown', (e) => e.key === 'Enter' && sendCode());
+      $('code').addEventListener('keydown', (e) => e.key === 'Enter' && verifyCode());
+      $('pw').addEventListener('keydown', (e) => e.key === 'Enter' && loginInvite());
     </script>
   </body>
 </html>

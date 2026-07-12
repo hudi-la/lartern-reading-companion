@@ -87,7 +87,20 @@
             <option value="explanation">Close reading (guides you line by line)</option>
           </select>
         </label>
+        <label class="field" id="keyField" hidden>
+          <span>Your Gemini API key · <b id="keyStatus"></b></span>
+          <input id="keyInput" type="password" placeholder="AIza… (blank = keep current)" autocomplete="off" />
+          <div style="display:flex; gap:8px;">
+            <button class="ghost-btn" id="keySave" style="flex:1;">Save key</button>
+            <button class="ghost-btn" id="keyClear" style="flex:1;">Remove</button>
+          </div>
+          <div class="ob-hint" id="keySettingsHint" style="min-height:0;"></div>
+        </label>
         <button class="ghost-btn" id="helpBtn"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>How to use</button>
+        <div class="field" id="accountRow" hidden>
+          <span>Signed in as <b id="acctEmail"></b></span>
+          <button class="ghost-btn" id="logoutBtn">Log out</button>
+        </div>
         <div class="log" id="log" hidden></div>
       </div>
     </div>
@@ -195,6 +208,19 @@
           <input id="obBookAuthor" class="ob-input" placeholder="Author (optional)" />
           <button class="ob-primary" id="obBookSave">Save and start reading</button>
         </div>
+      </section>
+    </div>
+
+    <!-- 门禁：登录后没配 Gemini key，先挡在这里填 -->
+    <div class="onboard" id="keyGate" hidden>
+      <section class="ob-step">
+        <div class="ob-glyph">🔑</div>
+        <h2 class="ob-title">Add your Gemini API key</h2>
+        <p class="ob-text">This app runs on your own Gemini key — your key, your usage.<br />It's stored encrypted and never shown again.</p>
+        <input id="keyGateInput" class="ob-input" type="password" placeholder="AIza…" autocomplete="off" />
+        <button class="ob-primary" id="keyGateSave">Save &amp; continue</button>
+        <a class="ob-ghost" id="keyGateHelp" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" style="text-decoration:none;display:inline-block;">Get a free key ↗</a>
+        <div class="ob-hint" id="keyGateHint"></div>
       </section>
     </div>
 
