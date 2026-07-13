@@ -117,7 +117,7 @@ function getUser(req) {
 // 非邮箱模式（invite/open）沿用旧行为，不限制。
 function isOwnerReq(req) {
   if (!EMAIL_AUTH) return true;
-  return OWNER_EMAILS.has(String(getUser(req)).toLowerCase());
+  return isOwnerUid(getUser(req));
 }
 
 const VISION_MODEL = process.env.GEMINI_VISION_MODEL || 'gemini-2.5-flash';
@@ -179,12 +179,29 @@ async function clearUserKey(name) {
   keyByUser.delete(name);
   if (supa) await supa.from('user_secrets').delete().eq('username', name);
 }
-// 该用户实际能用的 key：自己存的 > owner 回落全局；都没有则空（=还没配 key）
-function keyFor(name) {
-  return keyByUser.get(name) || (OWNER_EMAILS.has(String(name).toLowerCase()) ? KEY : '');
+// uid -> 邮箱（判 owner + 显示；登录时写、启动时从 accounts 载入）
+const emailByUid = new Map();
+function emailOf(uid) {
+  return emailByUid.get(uid) || '';
 }
-function hasKey(name) {
-  return Boolean(keyFor(name));
+function isOwnerUid(uid) {
+  return OWNER_EMAILS.has(emailOf(uid).toLowerCase());
+}
+async function loadAccounts() {
+  if (!supa) return;
+  const { data, error } = await supa.from('accounts').select('username,email');
+  if (error) return console.error('Supabase 读取账号失败:', error.message);
+  for (const r of data || []) if (r.email) emailByUid.set(r.username, r.email);
+}
+loadAccounts();
+// 该用户实际能用的 key。非邮箱模式（本地/邀请，无 BYOK）沿用全局 key；
+// 邮箱模式：自己存的 > owner 回落全局 > 空（=还没配 key，挡在填 key 页）
+function keyFor(uid) {
+  if (!EMAIL_AUTH) return KEY;
+  return keyByUser.get(uid) || (isOwnerUid(uid) ? KEY : '');
+}
+function hasKey(uid) {
+  return Boolean(keyFor(uid));
 }
 
 const USAGE_FILE = path.join(__dirname, 'data', 'usage.json');
@@ -474,12 +491,15 @@ app.post('/auth/verify', async (req, res) => {
   const code = String(req.body?.code || '').trim();
   const { data, error } = await supaAuth.auth.verifyOtp({ email, token: code, type: 'email' });
   if (error || !data?.user) return res.status(401).json({ ok: false, error: '验证码错误或已过期' });
+  // 统一身份：用 auth 的 UUID 当主键（与 card-writer 一致，跨 app 同一账号），邮箱只留显示/判 owner
+  const uid = data.user.id;
+  emailByUid.set(uid, email);
   const secure = req.headers['x-forwarded-proto'] === 'https' ? '; Secure' : '';
-  res.setHeader('Set-Cookie', `rc_auth=${signSession(email)}; HttpOnly; Path=/; Max-Age=2592000; SameSite=Lax${secure}`);
+  res.setHeader('Set-Cookie', `rc_auth=${signSession(uid)}; HttpOnly; Path=/; Max-Age=2592000; SameSite=Lax${secure}`);
   if (supa)
     supa
       .from('accounts')
-      .upsert({ username: email, last_seen: new Date().toISOString() }, { onConflict: 'username' })
+      .upsert({ username: uid, email, last_seen: new Date().toISOString() }, { onConflict: 'username' })
       .then(() => {}, () => {});
   res.json({ ok: true, email });
 });
@@ -505,12 +525,12 @@ app.use(express.static(path.join(__dirname, 'web'), { etag: false, lastModified:
 
 // 当前登录者 + 是否已配 key（前端据此决定要不要挡在「填 key」页）
 app.get('/me', (req, res) => {
-  const email = getUser(req);
+  const uid = getUser(req);
   res.json({
     ok: true,
-    email,
-    hasKey: hasKey(email),
-    isOwner: OWNER_EMAILS.has(String(email).toLowerCase()),
+    email: emailOf(uid), // 前端显示用；数据主键是 uid
+    hasKey: hasKey(uid),
+    isOwner: isOwnerUid(uid),
     byokRequired: EMAIL_AUTH, // 邮箱模式下没 key 不让用
     authMode: EMAIL_AUTH ? 'email' : AUTH_ON ? 'invite' : 'open',
   });

@@ -60,7 +60,8 @@
 两种模式，代码按环境变量自动选（缺新变量就回退旧邀请码，部署永远不崩）：
 
 **① 邮箱验证码（目标模式）** — 齐了 `SUPABASE_URL`+`SUPABASE_ANON_KEY`+`SESSION_SECRET` 就启用。
-- 流程：`/login` 输邮箱 → Supabase 发 6 位码 → 输码 → 后端设**签名 cookie**（`rc_auth = base64url(邮箱).HMAC`，防伪造）。身份=邮箱。
+- 流程：`/login` 输邮箱 → Supabase 发 6 位码 → 输码 → 后端设**签名 cookie**（`rc_auth = base64url(uid).HMAC`，防伪造）。
+- **身份 = Supabase Auth 的 UUID**（与 card-writer 一致，同邮箱跨两个 app 是同一账号）。所有表按 UUID 存；邮箱只留在 `accounts.email` 供显示 / 判 owner。`emailByUid` 内存表在登录时写、启动时从 accounts 载入。
 - 开放自助：任何邮箱都能注册。护栏靠 **BYOK**（见下），不是靠邀请。
 - 端点：`POST /auth/request`、`POST /auth/verify`、`POST /logout`、`GET /me`。
 - `/usage`、`/dashboard` 邮箱模式下**仅 `OWNER_EMAILS` 可见**（用户名=邮箱，不能泄露给自助注册的人）。
