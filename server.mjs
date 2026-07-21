@@ -503,14 +503,40 @@ app.post('/auth/verify', async (req, res) => {
       .then(() => {}, () => {});
   res.json({ ok: true, email });
 });
+// OAuth（Google 等）：前端用 supabase-js 完成登录后，把 access_token 交给后端验证 → 换成我们的签名 cookie。
+// 这样其余部分照旧走同源 cookie（WS/接口不用改），身份仍是同一个 auth UUID，跨 app 统一。
+app.post('/auth/session', async (req, res) => {
+  if (!EMAIL_AUTH) return res.status(400).json({ ok: false, error: '未启用邮箱登录' });
+  const token = String(req.body?.access_token || '');
+  const { data, error } = await supaAuth.auth.getUser(token);
+  if (error || !data?.user) return res.status(401).json({ ok: false, error: '会话无效' });
+  const uid = data.user.id;
+  const email = (data.user.email || '').toLowerCase();
+  emailByUid.set(uid, email);
+  const secure = req.headers['x-forwarded-proto'] === 'https' ? '; Secure' : '';
+  res.setHeader('Set-Cookie', `rc_auth=${signSession(uid)}; HttpOnly; Path=/; Max-Age=2592000; SameSite=Lax${secure}`);
+  if (supa)
+    supa
+      .from('accounts')
+      .upsert({ username: uid, email, last_seen: new Date().toISOString() }, { onConflict: 'username' })
+      .then(() => {}, () => {});
+  res.json({ ok: true });
+});
 app.post('/logout', (req, res) => {
   res.setHeader('Set-Cookie', 'rc_auth=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax');
   res.json({ ok: true });
 });
 
-// 登录模式 / 就绪状态：门禁之前公开，登录页据此切换「邮箱验证码 / 邀请码」界面
+// 登录模式 / 就绪状态：门禁之前公开，登录页据此切换界面。
+// 邮箱模式下附带 Supabase URL + anon key（公开的 publishable key），供登录页用 supabase-js 走 Google 登录。
 app.get('/status', (req, res) =>
-  res.json({ ready: Boolean(KEY), model: MODEL, authMode: EMAIL_AUTH ? 'email' : AUTH_ON ? 'invite' : 'open' })
+  res.json({
+    ready: Boolean(KEY),
+    model: MODEL,
+    authMode: EMAIL_AUTH ? 'email' : AUTH_ON ? 'invite' : 'open',
+    supabaseUrl: EMAIL_AUTH ? process.env.SUPABASE_URL : undefined,
+    supabaseAnonKey: EMAIL_AUTH ? ANON_KEY : undefined,
+  })
 );
 
 // 门禁：未登录的，网页跳登录页，接口返回 401

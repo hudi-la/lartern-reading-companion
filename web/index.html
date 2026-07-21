@@ -211,15 +211,17 @@
       </section>
     </div>
 
-    <!-- 门禁：登录后没配 Gemini key，先挡在这里填 -->
+    <!-- 门禁：登录后没配 Gemini key，先挡在这里填。迎新说明为什么要自带 key -->
     <div class="onboard" id="keyGate" hidden>
       <section class="ob-step">
         <div class="ob-glyph">🔑</div>
-        <h2 class="ob-title">Add your Gemini API key</h2>
-        <p class="ob-text">This app runs on your own Gemini key — your key, your usage.<br />It's stored encrypted and never shown again.</p>
+        <h2 class="ob-title">Bring your own Gemini key</h2>
+        <p class="ob-text">Reading with a live AI tutor burns a lot of tokens — honestly more than I can give away for free. So the app runs on <b>your</b> Gemini key.</p>
+        <p class="ob-text">Good news for students: for your own personal study, Google's <b>free</b> Gemini tier is usually enough to cover it. Grab a free key below, paste it once, and you're set.</p>
         <input id="keyGateInput" class="ob-input" type="password" placeholder="AIza…" autocomplete="off" />
         <button class="ob-primary" id="keyGateSave">Save &amp; continue</button>
         <a class="ob-ghost" id="keyGateHelp" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" style="text-decoration:none;display:inline-block;">Get a free key ↗</a>
+        <p class="ob-text" style="font-size:12px;opacity:0.7;">Stored encrypted, used only for your sessions, never shown again.</p>
         <div class="ob-hint" id="keyGateHint"></div>
       </section>
     </div>
