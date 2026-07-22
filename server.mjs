@@ -181,17 +181,24 @@ async function clearUserKey(name) {
 }
 // uid -> 邮箱（判 owner + 显示；登录时写、启动时从 accounts 载入）
 const emailByUid = new Map();
+const avatarByUid = new Map(); // uid -> Google 头像 URL（有就前端显示照片，否则邮箱首字母）
 function emailOf(uid) {
   return emailByUid.get(uid) || '';
+}
+function avatarOf(uid) {
+  return avatarByUid.get(uid) || '';
 }
 function isOwnerUid(uid) {
   return OWNER_EMAILS.has(emailOf(uid).toLowerCase());
 }
 async function loadAccounts() {
   if (!supa) return;
-  const { data, error } = await supa.from('accounts').select('username,email');
+  const { data, error } = await supa.from('accounts').select('username,email,avatar');
   if (error) return console.error('Supabase 读取账号失败:', error.message);
-  for (const r of data || []) if (r.email) emailByUid.set(r.username, r.email);
+  for (const r of data || []) {
+    if (r.email) emailByUid.set(r.username, r.email);
+    if (r.avatar) avatarByUid.set(r.username, r.avatar);
+  }
 }
 loadAccounts();
 // 该用户实际能用的 key。非邮箱模式（本地/邀请，无 BYOK）沿用全局 key；
@@ -512,13 +519,16 @@ app.post('/auth/session', async (req, res) => {
   if (error || !data?.user) return res.status(401).json({ ok: false, error: '会话无效' });
   const uid = data.user.id;
   const email = (data.user.email || '').toLowerCase();
+  const meta = data.user.user_metadata || {};
+  const avatar = meta.avatar_url || meta.picture || '';
   emailByUid.set(uid, email);
+  if (avatar) avatarByUid.set(uid, avatar);
   const secure = req.headers['x-forwarded-proto'] === 'https' ? '; Secure' : '';
   res.setHeader('Set-Cookie', `rc_auth=${signSession(uid)}; HttpOnly; Path=/; Max-Age=2592000; SameSite=Lax${secure}`);
   if (supa)
     supa
       .from('accounts')
-      .upsert({ username: uid, email, last_seen: new Date().toISOString() }, { onConflict: 'username' })
+      .upsert({ username: uid, email, avatar: avatar || null, last_seen: new Date().toISOString() }, { onConflict: 'username' })
       .then(() => {}, () => {});
   res.json({ ok: true });
 });
@@ -555,6 +565,7 @@ app.get('/me', (req, res) => {
   res.json({
     ok: true,
     email: emailOf(uid), // 前端显示用；数据主键是 uid
+    avatar: avatarOf(uid), // Google 头像 URL（可空）
     hasKey: hasKey(uid),
     isOwner: isOwnerUid(uid),
     byokRequired: EMAIL_AUTH, // 邮箱模式下没 key 不让用

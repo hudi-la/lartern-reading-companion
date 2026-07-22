@@ -915,6 +915,33 @@ async function fetchMe() {
   }
   return me;
 }
+// 首页设置入口改成头像：有 Google 头像用照片，否则邮箱首字母（点击仍打开设置面板）
+function renderHomeAvatar() {
+  const btn = $('homeSettings');
+  if (!btn || !me || me.authMode !== 'email' || !me.email) return;
+  btn.classList.add('avatar-btn');
+  btn.title = me.email;
+  const initial = (me.email.trim()[0] || '?').toUpperCase();
+  let hue = 0;
+  for (const c of me.email) hue = (hue * 31 + c.charCodeAt(0)) >>> 0;
+  hue %= 360;
+  const showInitial = () => {
+    btn.style.background = `hsl(${hue} 45% 58%)`;
+    btn.innerHTML = `<span class="avatar-initial">${esc(initial)}</span>`;
+  };
+  if (me.avatar) {
+    const img = document.createElement('img');
+    img.referrerPolicy = 'no-referrer';
+    img.alt = '';
+    img.onerror = showInitial;
+    img.src = me.avatar;
+    btn.style.background = 'transparent';
+    btn.innerHTML = '';
+    btn.appendChild(img);
+  } else {
+    showInitial();
+  }
+}
 function showKeyGate() {
   $('keyGate').hidden = false;
   $('keyGateHint').textContent = '';
@@ -1215,6 +1242,7 @@ $('obBookSave').onclick = () => {
 
   // 邮箱模式下没配自带 key（且非 owner）：先挡在填 key 页，填了才继续
   await fetchMe();
+  renderHomeAvatar();
   if (me && me.byokRequired && !me.hasKey) {
     showKeyGate();
     return;

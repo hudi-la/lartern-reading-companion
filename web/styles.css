@@ -74,6 +74,23 @@ body {
   background: #efeff2;
   color: #1d1d1f;
 }
+/* 首页设置入口 = 头像（Google 照片或邮箱首字母），点击仍打开设置面板 */
+.icon-btn.avatar-btn {
+  padding: 0;
+  overflow: hidden;
+}
+.avatar-btn img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.avatar-initial {
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+  line-height: 1;
+}
 
 /* 内联 SVG 图标（Lucide 细线条）：跟随按钮 color，尺寸随场景微调 */
 .ic {
