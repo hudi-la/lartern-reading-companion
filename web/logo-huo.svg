@@ -1,4 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48" role="img" aria-label="火 Lantern">
+<!-- favicon 专用：视框收紧到贴合火焰，让小尺寸下不显小。头部 logo 是内联 SVG。 -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="5 3 38 38" width="38" height="38" role="img" aria-label="火 Lantern">
   <title>火 · Lantern（暮）</title>
   <path d="M15.5 15 C 21 23, 21 32, 16 37 C 11 32, 10.5 23, 15.5 15 Z" fill="#b35f7d"/>
   <path d="M32.5 15 C 38 23, 38 32, 32 37 C 27 32, 27 23, 32.5 15 Z" fill="#9a6bb0"/>
