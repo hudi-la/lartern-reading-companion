@@ -1134,18 +1134,6 @@ body {
   display: block;
   filter: drop-shadow(0 0 5px rgba(230, 178, 90, 0.32));
 }
-.home-brandstack {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.1;
-}
-.home-sub {
-  font-family: "Songti SC", serif;
-  font-size: 12px;
-  color: #8d8d96;
-  letter-spacing: 0.2em;
-  margin-top: 3px;
-}
 .home-hint {
   display: flex;
   align-items: center;
