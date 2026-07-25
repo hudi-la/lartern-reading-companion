@@ -1119,6 +1119,32 @@ body {
   font-weight: 700;
   letter-spacing: 1px;
   margin: 0;
+  font-family: Georgia, "Songti SC", serif;
+}
+/* 火 logo + Lantern 品牌锁定组（呼应写作 App 的 River 头部，深色版） */
+.home-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.home-logo {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  display: block;
+  filter: drop-shadow(0 0 5px rgba(230, 178, 90, 0.32));
+}
+.home-brandstack {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+.home-sub {
+  font-family: "Songti SC", serif;
+  font-size: 12px;
+  color: #8d8d96;
+  letter-spacing: 0.2em;
+  margin-top: 3px;
 }
 .home-hint {
   display: flex;
