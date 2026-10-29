@@ -113,3 +113,7 @@
 | **Google AI Studio** | Gemini API key（烧钱的那个） | Render `GEMINI_API_KEY` |
 | **Render** | 托管、自动部署、环境变量 | 控制台登录 |
 | **Supabase**（项目 reading assistant） | 用量/书库/画像/记忆 4 张表 | service_role key → Render `SUPABASE_SERVICE_KEY` |
+
+## 2026-10-29 accessibility release
+
+Source `15c4f913631baa9e09581f11a386a335d9cc72b4`, pushed to main and codex/accessibility-20261028. Render `dep-dbhtl20473hc73b29f10` confirmed Live. Adds named keyboard controls, dialog focus, captions/text questions, zoom support, reduced motion, and desktop phone guide/QR. Two automated regressions and browser keyboard checks passed. Camera/microphone/model calls were not used in validation. Previous source `2158b95`; rollback via Render deployment `dep-d9igbkkvikkc73crqnfg` without changing user data.
