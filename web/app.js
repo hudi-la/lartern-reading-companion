@@ -232,10 +232,16 @@ function renderLibrary() {
   books.forEach((b) => {
     const c = document.createElement('div');
     buildCover(c, b);
-    c.onclick = () => enterBook(b);
+    const open = document.createElement('button');
+    open.type = 'button';
+    open.className = 'book-open';
+    open.setAttribute('aria-label', `Read ${b.title || 'book'}`);
+    open.onclick = () => enterBook(b);
+    c.appendChild(open);
     const nb = document.createElement('button');
     nb.className = 'card-notes';
     nb.title = 'Notes';
+    nb.setAttribute('aria-label', `Notes for ${b.title || 'book'}`);
     nb.innerHTML =
       '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
     nb.onclick = (e) => {
@@ -245,7 +251,8 @@ function renderLibrary() {
     c.appendChild(nb);
     grid.appendChild(c);
   });
-  const add = document.createElement('div');
+  const add = document.createElement('button');
+  add.type = 'button';
   add.className = 'book-card add';
   add.innerHTML = '<div class="plus">＋</div><div>Add book</div>';
   add.onclick = () => enterCapture();

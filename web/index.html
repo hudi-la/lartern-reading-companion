@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <link rel="icon" type="image/svg+xml" href="logo-huo.svg" />
     <title>Lantern · 火</title>
@@ -16,9 +16,10 @@
           <svg class="home-logo" viewBox="0 0 48 48" role="img" aria-label="火 Lantern"><path d="M15.5 15 C 21 23, 21 32, 16 37 C 11 32, 10.5 23, 15.5 15 Z" fill="#b35f7d"/><path d="M32.5 15 C 38 23, 38 32, 32 37 C 27 32, 27 23, 32.5 15 Z" fill="#9a6bb0"/><path d="M24 5 C 32 16, 32 31, 24 39 C 16 31, 16 16, 24 5 Z" fill="#e6b25a"/></svg>
           <h1 class="home-title">Lantern</h1>
         </div>
-        <button id="homeSettings" class="icon-btn" title="Settings"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg></button>
+        <button id="homeSettings" aria-label="Settings" class="icon-btn" title="Settings"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg></button>
       </div>
       <div class="home-hint" id="homeHint"><span class="dot-off"></span>Camera off · Pick a book to start</div>
+      <aside class="phone-guide" aria-label="Read on your phone"><img src="phone-qr.svg" width="132" height="132" alt="QR code to open Lantern on your phone" /><div><strong>Designed for reading on your phone.</strong><p>Scan with your phone camera to open Lantern. Sign in with the same account to find your books.</p><a href="https://reading-companion.onrender.com/">Open Lantern on your phone ↗</a><p>You can also continue on this computer.</p></div></aside>
       <div class="book-grid" id="homeGrid"></div>
     </div>
 
@@ -41,10 +42,10 @@
         <div class="caption" id="caption"></div>
         <div class="orb-row">
           <button id="pauseBtn" class="side-btn" title="Pause camera & mic"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/></svg></button>
-          <div class="orb stopped" id="orb"></div>
+          <button type="button" class="orb stopped" id="orb" aria-label="Start or stop reading conversation"></button>
           <button id="flipBtn" class="side-btn" title="Flip camera"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 19H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5"/><path d="M13 5h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-5"/><circle cx="12" cy="12" r="3"/><path d="m18 22-3-3 3-3"/><path d="m6 2 3 3-3 3"/></svg></button>
         </div>
-        <div class="orb-label" id="statusText">Tap to wake</div>
+        <div class="orb-label" id="statusText" role="status">Tap to wake</div>
       </div>
 
       <!-- 添加新书：拍封面识别 -->
@@ -52,8 +53,8 @@
         <div class="cap-frame"></div>
         <div class="cap-text" id="capText">Aim the book cover at the frame, then tap below</div>
         <div class="cap-manual" id="capManual" hidden>
-          <input id="capBookTitle" class="ob-input" placeholder="Title" />
-          <input id="capBookAuthor" class="ob-input" placeholder="Author (optional)" />
+          <input id="capBookTitle" aria-label="Book title" class="ob-input" placeholder="Title" />
+          <input id="capBookAuthor" aria-label="Author (optional)" class="ob-input" placeholder="Author (optional)" />
           <button id="capBookSave" class="cap-btn">Save to library</button>
         </div>
         <button id="captureBtn" class="cap-btn"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>Capture cover</button>
@@ -93,7 +94,7 @@
         </label>
         <label class="field" id="keyField" hidden>
           <span>Your Gemini API key · <b id="keyStatus"></b></span>
-          <input id="keyInput" type="password" placeholder="AIza… (blank = keep current)" autocomplete="off" />
+          <input id="keyInput" aria-label="Gemini API key" type="password" placeholder="AIza… (blank = keep current)" autocomplete="off" />
           <div style="display:flex; gap:8px;">
             <button class="ghost-btn" id="keySave" style="flex:1;">Save key</button>
             <button class="ghost-btn" id="keyClear" style="flex:1;">Remove</button>
@@ -163,7 +164,7 @@
           <button type="button" data-lang="auto" class="on">Match the language I ask in</button>
           <div class="ob-langpick" id="obLangPick">
             <span>Pick a language</span>
-            <select id="obLangSelect"></select>
+            <select id="obLangSelect" aria-label="Reply language"></select>
           </div>
         </div>
         <button class="ob-primary" data-next>Next</button>
@@ -208,8 +209,8 @@
         <button class="ob-primary" id="obBookScan">📷 Scan cover</button>
         <button class="ob-ghost" id="obManualToggle">Enter manually instead</button>
         <div class="ob-manual" id="obManual" hidden>
-          <input id="obBookTitle" class="ob-input" placeholder="Title" />
-          <input id="obBookAuthor" class="ob-input" placeholder="Author (optional)" />
+          <input id="obBookTitle" aria-label="Book title" class="ob-input" placeholder="Title" />
+          <input id="obBookAuthor" aria-label="Author (optional)" class="ob-input" placeholder="Author (optional)" />
           <button class="ob-primary" id="obBookSave">Save and start reading</button>
         </div>
       </section>
@@ -222,7 +223,7 @@
         <h2 class="ob-title">Bring your own Gemini key</h2>
         <p class="ob-text">Reading with a live AI tutor burns a lot of tokens — honestly more than I can give away for free. So the app runs on <b>your</b> Gemini key.</p>
         <p class="ob-text">Good news for students: for your own personal study, Google's <b>free</b> Gemini tier is usually enough to cover it. Grab a free key below, paste it once, and you're set.</p>
-        <input id="keyGateInput" class="ob-input" type="password" placeholder="AIza…" autocomplete="off" />
+        <input id="keyGateInput" aria-label="Gemini API key" class="ob-input" type="password" placeholder="AIza…" autocomplete="off" />
         <button class="ob-primary" id="keyGateSave">Save &amp; continue</button>
         <a class="ob-ghost" id="keyGateHelp" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" style="text-decoration:none;display:inline-block;">Get a free key ↗</a>
         <p class="ob-text" style="font-size:12px;opacity:0.7;">Stored encrypted, used only for your sessions, never shown again.</p>
