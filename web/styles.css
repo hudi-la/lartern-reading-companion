@@ -1252,3 +1252,13 @@ button.orb { border: 0; padding: 0; }
 .phone-guide p { margin: 6px 0; }
 .phone-guide a { color: #64406c; text-decoration: underline; }
 @media (max-width: 640px) { .phone-guide { display: none; } }
+
+.accessible-conversation { position: absolute; z-index: 21; top: 76px; left: 16px; right: 16px; max-width: 600px; padding: 10px; border-radius: 12px; background: #17171de8; color: #fff; font-size: 14px; }
+.accessible-conversation button, .accessible-conversation input { font: inherit; padding: 8px 10px; border: 1px solid #b1b1bc; border-radius: 6px; background: #fff; color: #18181c; }
+#liveCaptions { max-height: 22vh; overflow: auto; line-height: 1.5; }
+#liveCaptions:empty { display: none; }
+#liveCaptions p { margin: 8px 0; }
+.text-question-row { display: flex; gap: 8px; }
+.text-question-row input { flex: 1; min-width: 0; }
+#textQuestionForm label { display: block; margin: 6px 0; }
+.screen:has(#captureBar:not([hidden])) .accessible-conversation { display: none; }

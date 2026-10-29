@@ -751,11 +751,13 @@ async function wake() {
       setState('listening');
     } else if (m.type === 'turnComplete') {
       turnAudioStarted = false;
+      transcriptRole = null;
       setState('listening');
       startAutoStop();
     } else if (m.type === 'resumeHandle') {
       resumeHandle = m.handle; // 存住，重连/恢复时带回去
     } else if (m.type === 'transcript') {
+      showTranscript(m.role, m.text);
       log((m.role === 'in' ? '你：' : 'AI：') + m.text); // 转写回显，看中英混说准不准
     } else if (m.type === 'noteSaved') {
       currentMemory.reflections.push({ text: m.text, at: Date.now() }); // 当场进当前书的想法列表
@@ -847,6 +849,8 @@ function goHome(hint) {
   $('topBar').hidden = false;
   $('readingScreen').hidden = true;
   $('libraryHome').hidden = false;
+  $('liveCaptions').replaceChildren();
+  transcriptRole = null;
   renderLibrary();
   $('homeHint').innerHTML = '<span class="dot-off"></span>' + (hint || 'Camera off · Pick a book to start');
 }
@@ -1257,3 +1261,35 @@ $('obBookSave').onclick = () => {
 
   proceedAfterAuth();
 })();
+
+// Visible text alternatives to spoken questions and replies. Never send on IME composition.
+let transcriptRole = null;
+function showTranscript(role, text) {
+  if (!text) return;
+  const log = $('liveCaptions');
+  if (role !== transcriptRole || !log.lastElementChild) {
+    const line = document.createElement('p');
+    line.textContent = role === 'in' ? 'You: ' : 'Lantern: ';
+    log.appendChild(line);
+    transcriptRole = role;
+  }
+  log.lastElementChild.appendChild(document.createTextNode(text));
+  while (log.children.length > 40) log.firstElementChild.remove();
+  log.scrollTop = log.scrollHeight;
+}
+$('captionsToggle').onclick = () => {
+  const log = $('liveCaptions');
+  log.hidden = !log.hidden;
+  $('captionsToggle').setAttribute('aria-pressed', String(!log.hidden));
+  $('captionsToggle').textContent = log.hidden ? 'Show captions' : 'Hide captions';
+};
+$('textQuestion').addEventListener('keydown', e => { if (e.isComposing && e.key === 'Enter') e.preventDefault(); });
+$('textQuestionForm').onsubmit = e => {
+  e.preventDefault();
+  const input = $('textQuestion'), text = input.value.trim();
+  if (!text) return;
+  if (!streaming || !ws || ws.readyState !== 1) { setStatus('Start the reading conversation before sending a question.'); return; }
+  ws.send(JSON.stringify({type:'text', text}));
+  showTranscript('in', text);
+  input.value = '';
+};

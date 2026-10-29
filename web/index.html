@@ -62,10 +62,18 @@
         <button id="captureCancel" class="cap-cancel">Cancel</button>
       </div>
 
+      <section class="accessible-conversation" aria-label="Conversation text">
+        <button type="button" id="captionsToggle" aria-pressed="true" aria-controls="liveCaptions">Hide captions</button>
+        <div id="liveCaptions" role="log" aria-label="Live captions" aria-live="off" tabindex="0"></div>
+        <form id="textQuestionForm">
+          <label for="textQuestion">Type a question</label>
+          <div class="text-question-row"><input id="textQuestion" autocomplete="off" /><button type="submit">Send</button></div>
+        </form>
+      </section>
       <!-- 暂停：冻结当前画面 + 压暗，正中放蓝色恢复键；顶栏仍可见 -->
       <div class="paused-veil" id="pausedVeil" hidden>
         <img id="pausedShot" class="paused-shot" alt="" />
-        <button id="resumeBtn" class="resume-big"><svg class="ic" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v16l13-8z"/></svg></button>
+        <button id="resumeBtn" aria-label="Resume camera and microphone" class="resume-big"><svg class="ic" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v16l13-8z"/></svg></button>
         <div class="resume-label">Paused · tap to resume</div>
       </div>
     </div>
@@ -232,6 +240,7 @@
     </div>
 
     <canvas id="captureCanvas" hidden></canvas>
+    <script src="accessibility.js"></script>
     <script src="app.js"></script>
   </body>
 </html>

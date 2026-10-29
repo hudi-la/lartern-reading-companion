@@ -5,7 +5,8 @@
   "main": "server.mjs",
   "scripts": {
     "start": "node server.mjs",
-    "web": "node server.mjs"
+    "web": "node server.mjs",
+    "test": "node --test accessibility.test.cjs"
   },
   "engines": {
     "node": ">=20"
@@ -15,5 +16,8 @@
     "@supabase/supabase-js": "^2.45.0",
     "express": "^4.22.2",
     "ws": "^8.21.0"
+  },
+  "devDependencies": {
+    "jsdom": "^26.1.0"
   }
 }
